@@ -40,15 +40,31 @@
   function color(n,l=46,s=52){return`hsl(${hue(String(n))} ${s}% ${l}%)`;}
   function initials(n){const p=String(n).trim().split(/\s+/);return(((p[0]||"")[0]||"")+((p[1]||"")[0]||"")).toUpperCase();}
 
-  /* ---- seniority ranking (lower = more senior) ---- */
+  /* ---- position ranking (lower = more senior) ----
+     The Lead of any group is the person with the most senior POSITION.
+     Order matters: the FIRST matching pattern wins, so specific titles must
+     come before generic ones. Chain of command used here:
+       Chairman > C-suite > Director/Board > (Senior) GM > Deputy GM >
+       General Manager > Zonal/Regional/Functional Head > Senior Manager > …
+     A General Manager (3) therefore outranks both a "Zonal Head" and a
+     "Head of <function>" (both 4) — matching your marked example where the
+     GM, not the Zonal Head, is the Lead. */
   const RANKS = [
-    [0,/chairman/],[1,/chief|\bceo\b|founder|president/],
-    [2,/director|head of|\bhead\b|board|senior general manager|\bsgm\b/],
-    [4,/deputy general manager|\bdgm\b/],[3,/general manager|\bgm\b|zonal head|regional head/],
-    [5,/senior manager/],[7,/deputy manager|assistant manager|\bam\b|asst/],
-    [6,/manager/],[8,/\blead\b|qualifier/],[9,/senior /],
+    [0,/chairman/],
+    [1,/chief|\bceo\b|founder|president/],
+    [2,/director|board/],
+    [2,/senior general manager|\bsgm\b/],
+    [3.5,/deputy general manager|\bdgm\b/],
+    [3,/general manager|\bgm\b/],
+    [4,/zonal head|regional head|head of|\bhead\b/],
+    [5,/senior manager/],
+    [7,/deputy manager|assistant manager|\bam\b|asst/],
+    [6,/manager/],
+    [8,/\blead\b|qualifier/],
+    [9,/senior /],
     [10,/executive|engineer|officer|advisor|consultant|architect|analyst|specialist|coordinator|designer|relationship/],
-    [11,/supervisor/],[12,/technician|operator|draftsman|visualizer|controller/],
+    [11,/supervisor/],
+    [12,/technician|operator|draftsman|visualizer|controller/],
     [13,/electrician|plumber|welder|painter|carpenter|mason|fabricator|gardener|horticulture/],
     [14,/driver|rider|cook|janitor|helper|office boy|security|guard|store keeper|lift|front desk|peon/],
     [15,/intern/]
@@ -169,7 +185,10 @@
     </div>`;
   }
   function childrenRow(arr){
-    const cls="children"+(arr.length===1?" single":"");
+    // One child -> a single centred connector. Two or more -> a responsive
+    // wrapping grid under the parent, so any fan-out (2 or 29) fits every
+    // screen size instead of forcing a wide horizontal row.
+    const cls = arr.length===1 ? "children single" : "children grid";
     return `<div class="${cls}">${arr.map(b=>`<div class="child">${b}</div>`).join("")}</div>`;
   }
 
@@ -216,9 +235,80 @@
     });
   }
 
+  /* ---- outline / "expand the whole organogram at once" view ---- */
+  let viewMode = "drill";          // "drill" = step-by-step chart; "tree" = full outline
+  const expanded = new Set();      // open node keys in outline mode
+  function nodeKey(p){ return p.map(x=>x.field+"="+x.value).join("|"); }
+  function allGroupKeys(){
+    const keys=[];
+    (function walk(p,list){
+      const f=hierarchy[p.length]; if(!f) return;
+      for(const [name] of groupsAt(f,list)){
+        const np=p.concat([{field:f,value:name}]);
+        keys.push(nodeKey(np));
+        walk(np, list.filter(e=>val(e,f)===name));
+      }
+    })([],EMP);
+    return keys;
+  }
+  function setView(m){
+    viewMode=m;
+    document.body.classList.toggle("treemode", m==="tree");
+    const vb=$("#view-btn"); if(vb) vb.textContent = m==="tree" ? "▭ Chart view" : "☰ Expand all";
+  }
+  function treePerson(e,isLead,depth){
+    return `<div class="tperson${isLead?" lead":""}" style="--d:${depth}">
+      <span class="tav" style="background:${color(val(e,hierarchy[0]||"department"),42,55)}">${esc(initials(val(e,"name")))}</span>
+      <span class="tpbody">
+        <span class="tpname">${esc(val(e,"name"))}${isLead?'<span class="leadtag">Lead</span>':""}</span>
+        <span class="tppos">${esc(val(e,"position"))}</span>
+      </span>
+      <span class="tpid">#${esc(val(e,"emp_no"))}</span>
+    </div>`;
+  }
+  function treeRows(p,list,depth){
+    const field=hierarchy[p.length];
+    if(!field){ // leaf -> people
+      const people=list.slice().sort(bySeniority);
+      return `<div class="tkids people" style="--d:${depth}">`+people.map((e,i)=>treePerson(e,i===0&&people.length>1,depth)).join("")+`</div>`;
+    }
+    let html="";
+    for(const [name,ct] of groupsAt(field,list)){
+      const np=p.concat([{field,value:name}]);
+      const key=nodeKey(np), sub=list.filter(e=>val(e,field)===name);
+      const lead=leadOf(sub), open=expanded.has(key);
+      const leafParent=(np.length===hierarchy.length);
+      html+=`<div class="trow${open?" open":""}" style="--d:${depth}" data-toggle="${esc(key)}">
+        <span class="tcaret">${open?"▾":"▸"}</span>
+        <span class="tsw" style="background:${color(name)}"></span>
+        <span class="tname">${esc(name)}</span>
+        <span class="tcount">${ct}</span>
+        ${lead?`<span class="tlead">${esc(leafParent?"Senior":fieldLabel(field)+" lead")}: <b>${esc(lead.name)}</b></span>`:""}
+      </div>`;
+      if(open) html+=treeRows(np,sub,depth+1);
+    }
+    return html;
+  }
+  function renderTree(){
+    const tree=$("#tree");
+    tree.innerHTML=`<div class="toutbar">
+        <button class="tbtn primary" id="exp-all">⊞ Expand whole organogram</button>
+        <button class="tbtn" id="col-all">⊟ Collapse all</button>
+        <span class="thint">…or open one level at a time by clicking a row.</span>
+      </div>
+      <div class="outline">${treeRows([],EMP,0)||'<div class="empty">No data.</div>'}</div>`;
+    $("#exp-all").onclick=()=>{ allGroupKeys().forEach(k=>expanded.add(k)); renderTree(); };
+    $("#col-all").onclick=()=>{ expanded.clear(); renderTree(); };
+    tree.querySelectorAll(".trow[data-toggle]").forEach(r=>r.onclick=()=>{
+      const k=r.dataset.toggle; expanded.has(k)?expanded.delete(k):expanded.add(k); renderTree();
+    });
+  }
+
   /* ---- main render ---- */
   function render(){
-    stats(); renderCrumbs(); renderSidebar();
+    stats();
+    if(viewMode==="tree"){ renderTree(); return; }
+    renderCrumbs(); renderSidebar();
     const tree=$("#tree");
     const field=currentField();
     const list=scoped();
@@ -249,7 +339,7 @@
   }
 
   function adjustBar(){
-    const row=$(".children"); if(!row||row.classList.contains("single"))return;
+    const row=$(".children"); if(!row||row.classList.contains("single")||row.classList.contains("grid"))return;
     const kids=row.querySelectorAll(".child"); if(kids.length<2)return;
     const rB=row.getBoundingClientRect();
     const f=kids[0].getBoundingClientRect(), l=kids[kids.length-1].getBoundingClientRect();
@@ -401,6 +491,7 @@
     results.classList.add("show");
     results.querySelectorAll(".res").forEach(r=>r.onclick=()=>{
       const e=EMP.find(x=>x._id===+r.dataset.id);
+      if(viewMode==="tree") setView("drill");                 // jump back to the chart to focus a person
       path = hierarchy.map(k=>({field:k,value:val(e,k)}));   // focus down to their leaf group
       results.classList.remove("show"); $("#search").value=""; render(); $(".stage").scrollTop=0;
       setTimeout(()=>{const card=document.querySelector(`.ecard[data-id="${e._id}"]`);
@@ -455,6 +546,9 @@
       try{localStorage.removeItem(LS_KEY);}catch(e){}
       EMP=reindex(RAW); editCount=0; path=[]; refreshBanner(); render(); toast("Local edits discarded");
     };
+    // view toggle: step-by-step chart <-> full outline (available to everyone)
+    const vb=$("#view-btn");
+    if(vb) vb.onclick=()=>{ setView(viewMode==="tree"?"drill":"tree"); render(); $(".stage").scrollTop=0; };
     // editor modal
     if(EDIT){
       $("#add-btn").onclick=()=>openEditor(null);
