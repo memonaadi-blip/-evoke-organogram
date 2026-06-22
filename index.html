@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Evoke Organogram</title>
+<meta name="description" content="Interactive organisation hierarchy">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;450;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <h1 id="brand-name">Evoke</h1>
+    <span class="tag" id="brand-sub">Organisation hierarchy</span>
+    <span class="ro-badge edit-hide" id="ro-badge" style="display:none">View only</span>
+  </div>
+  <div class="hstats">
+    <div class="hstat"><b id="s-emp">0</b><span>Employees</span></div>
+    <div class="hstat"><b id="s-units">0</b><span id="s-units-lbl">Departments</span></div>
+    <div class="hstat edit-only"><b id="s-edits">0</b><span>Edits</span></div>
+  </div>
+  <div class="htools">
+    <div class="searchwrap">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input id="search" type="search" placeholder="Find anyone…" autocomplete="off">
+    </div>
+    <button class="btn edit-only" id="add-btn">＋ Add</button>
+    <button class="btn edit-only" id="settings-btn">⚙ Hierarchy</button>
+    <div class="menu">
+      <button class="btn gold" id="export-btn">⤓ Export ▾</button>
+      <div class="menu-pop" id="export-pop">
+        <div class="mh">Download</div>
+        <button data-exp="js">data/employees.js (commit this)</button>
+        <button data-exp="csv">Spreadsheet (.csv)</button>
+        <button data-exp="json">Plain JSON (.json)</button>
+        <div class="mh edit-only">Configuration</div>
+        <button class="edit-only" data-exp="config">js/config.js</button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="banner edit-only" id="banner">
+  <span>You have <b>unsaved edits</b> in this browser. Export <b>employees.js</b> and commit it to publish for everyone.</span>
+  <span class="sp"></span>
+  <button class="solid" id="banner-export">Export employees.js</button>
+  <button id="banner-discard">Discard</button>
+</div>
+
+<nav class="crumbs" id="crumbs"></nav>
+
+<div class="body" id="body">
+  <aside class="sidebar" id="sidebar">
+    <div class="sb-head"><span class="lbl" id="side-lbl">Departments</span><span class="lbl" id="side-total">—</span></div>
+    <div class="unitlist" id="unitlist"></div>
+  </aside>
+  <div class="stage"><div class="tree" id="tree"></div></div>
+</div>
+
+<div class="results" id="results"></div>
+
+<!-- Edit / Add modal -->
+<div class="overlay" id="emp-overlay">
+  <div class="modal">
+    <div class="modal-head"><h3 id="emp-title">Edit person</h3><button class="modal-x" data-close>×</button></div>
+    <div class="modal-body" id="emp-fields"></div>
+    <div class="modal-foot">
+      <button class="mbtn danger" id="emp-delete">Delete</button>
+      <span class="sp"></span>
+      <button class="mbtn subtle" data-close>Cancel</button>
+      <button class="mbtn primary" id="emp-save">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Settings / hierarchy modal -->
+<div class="overlay" id="set-overlay">
+  <div class="modal">
+    <div class="modal-head"><h3>Hierarchy levels</h3><button class="modal-x" data-close>×</button></div>
+    <div class="modal-body">
+      <p class="note" style="margin-top:0">Order the levels people drill through, top to bottom. The individual employee is always the final level. Reorder, add, or remove levels — the chart rebuilds instantly.</p>
+      <div class="lvl-list" id="lvl-list"></div>
+      <div class="addlvl">
+        <select id="add-lvl-sel"></select>
+        <button class="mbtn subtle" id="add-lvl-btn">Add level</button>
+      </div>
+      <p class="note">To make this the permanent default, click <b>Export → js/config.js</b> and commit the file.</p>
+    </div>
+    <div class="modal-foot"><span class="sp"></span><button class="mbtn primary" data-close>Done</button></div>
+  </div>
+</div>
+
+<div id="toast"><span class="dot"></span><span id="toast-msg"></span></div>
+
+<!-- data first, then config, then app -->
+<script src="data/employees.js"></script>
+<script src="js/config.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
