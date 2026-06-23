@@ -8,6 +8,7 @@
   const CFG = window.ORG_CONFIG || {};
   const RAW = (window.EVOKE_DATA || []).slice();
   const LS_KEY = "evoke_org_draft_v1";
+  const LS_LOG = "evoke_org_log_v1";
   const $ = (s) => document.querySelector(s);
   const $$ = (s) => Array.prototype.slice.call(document.querySelectorAll(s));
 
@@ -23,6 +24,7 @@
   let hierarchy = (CFG.hierarchy || []).slice();   // array of field keys
   let path = [];                // [{field,value}]
   let editCount = 0;
+  let changeLog = [];           // [{ts,type,emp_no,name,field,from,to}] — every movement/edit
 
   /* ---- field helpers ---- */
   const FIELDS = CFG.fields || [];
@@ -85,6 +87,10 @@
         const d = localStorage.getItem(LS_KEY);
         if (d){ const arr = JSON.parse(d); if(Array.isArray(arr)&&arr.length){ EMP = reindex(arr); } }
       }catch(e){}
+      try{
+        const l = localStorage.getItem(LS_LOG);
+        if (l){ const arr = JSON.parse(l); if(Array.isArray(arr)) changeLog = arr; }
+      }catch(e){}
     }
     // brand
     $("#brand-name").textContent = CFG.orgName || "Organogram";
@@ -98,8 +104,20 @@
   function saveDraft(){
     if(!EDIT) return;
     try{ localStorage.setItem(LS_KEY, JSON.stringify(strip(EMP))); }catch(e){}
+    try{ localStorage.setItem(LS_LOG, JSON.stringify(changeLog)); }catch(e){}
     refreshBanner();
   }
+
+  /* ---- change log: record every movement / edit (as-is → to-be) ---- */
+  function logChange(type, e, changes){
+    const ts=Date.now();
+    changes.forEach(c=>{
+      const lbl = FIELDS.some(f=>f.key===c.field) ? fieldLabel(c.field) : c.field;
+      changeLog.push({ts, type, emp_no:val(e,"emp_no"), name:val(e,"name"), field:lbl, from:c.from, to:c.to});
+    });
+    updateChangesBadge();
+  }
+  function updateChangesBadge(){ const b=$("#changes-ct"); if(b) b.textContent=changeLog.length; }
   function refreshBanner(){
     const b=$("#banner"); if(!b) return;
     b.classList.toggle("show", dirty());
@@ -109,6 +127,49 @@
   function matchesPath(e){ return path.every((p)=> val(e,p.field) === p.value ); }
   function scoped(){ return EMP.filter(matchesPath); }
   function currentField(){ return hierarchy[path.length]; }   // undefined => leaf
+  /* From startDepth, skip any hierarchy level that has 0 or 1 distinct group
+     (a single sub-node is redundant) and return the next MEANINGFUL level —
+     so e.g. a department with one section opens its people directly. */
+  function planLevel(startDepth, list){
+    let depth=startDepth; const skipped=[];
+    while(depth<hierarchy.length){
+      const g=groupsAt(hierarchy[depth], list);
+      if(list.length>0 && g.length<=1){
+        if(g.length===1) skipped.push({field:hierarchy[depth], value:g[0][0]});
+        depth++; continue;
+      }
+      break;
+    }
+    return { depth, field: depth<hierarchy.length ? hierarchy[depth] : undefined, skipped };
+  }
+  /* every existing FULL path through the hierarchy (a real leaf node) */
+  function leafPaths(){
+    const seen=new Map();
+    for(const e of EMP){
+      const p=hierarchy.map(f=>({field:f, value:val(e,f)}));
+      const key=p.map(x=>x.field+"="+x.value).join("|");
+      if(!seen.has(key)) seen.set(key,p);
+    }
+    return [...seen.values()];
+  }
+  const pathKey=(p)=>p.map(x=>x.field+"="+x.value).join("|");
+  function parsePathKey(k){ return k.split("|").map(s=>{const i=s.indexOf("=");return{field:s.slice(0,i),value:s.slice(i+1)};}); }
+  /* <optgroup>…</optgroup> for the "Move to…" picker — built once per render
+     (reset in render) and shared by every card instead of rebuilt per card */
+  let _moveOptsCache=null;
+  function moveOptionsHTML(){
+    if(_moveOptsCache!=null) return _moveOptsCache;
+    const byTop=new Map();
+    leafPaths().forEach(p=>{ const top=p[0].value; if(!byTop.has(top)) byTop.set(top,[]); byTop.get(top).push(p); });
+    _moveOptsCache=[...byTop.entries()].sort((a,b)=>a[0].localeCompare(b[0])).map(([top,ps])=>{
+      const opts=ps.map(p=>{
+        const label=p.slice(1).map(x=>x.value).join(" › ")||p[0].value;
+        return `<option value="${esc(pathKey(p))}">${esc(label)}</option>`;
+      }).join("");
+      return `<optgroup label="${esc(top)}">${opts}</optgroup>`;
+    }).join("");
+    return _moveOptsCache;
+  }
   function groupsAt(field, list){
     const m=new Map();
     for(const e of list){ const k=val(e,field); m.set(k,(m.get(k)||0)+1); }
@@ -150,7 +211,7 @@
         el.ondragleave=()=>el.classList.remove("drop");
         el.ondrop=(ev)=>{ev.preventDefault();el.classList.remove("drop");
           const id=+ev.dataTransfer.getData("text/plain");
-          reassign(id, topField, name);};
+          moveToNode(id, [{field:topField, value:name}]);};
       }
       box.appendChild(el);
     }
@@ -213,14 +274,10 @@
     const chips = CHIPS.map(k=>`<span class="chip">${esc(val(e,k))}</span>`).join("");
     let actions="";
     if(EDIT){
-      const last = path[path.length-1];
-      const moveField = last ? last.field : hierarchy[hierarchy.length-1];
       let move="";
-      if(moveField){
-        const opts = groupsAt(moveField,EMP).map(([v])=>v).filter(v=>v!==val(e,moveField))
-          .map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join("");
-        move=`<select data-id="${e._id}" data-field="${esc(moveField)}" title="Move to another ${esc(fieldLabel(moveField))}">
-          <option value="">Move ${esc(fieldLabel(moveField))}…</option>${opts}</select>`;
+      if(hierarchy.length){
+        // options are filled lazily on first open (keeps big people lists fast)
+        move=`<select class="movesel" data-id="${e._id}" data-empty="1" title="Move this person to another node"><option value="">Move to…</option></select>`;
       }
       actions=`<div class="ec-actions">${move}<button class="iconbtn" data-edit="${e._id}">Edit</button></div>`;
     }
@@ -285,14 +342,15 @@
   /* one branch of the fully-expanded chart: a group box with its whole
      sub-tree (sections, etc.) connected beneath it, recursing to the leaves */
   function chartBranch(p, list){
-    const field=hierarchy[p.length];
+    const plan=planLevel(p.length, list);       // skip redundant single-group levels
+    const field=plan.field;
     if(!field) return "";                       // people are the leaves; not drawn as boxes
-    const isLeafParent=(p.length===hierarchy.length-1);
+    const isLeafParent=(plan.depth===hierarchy.length-1);
     const cells=groupsAt(field,list).map(([name,ct])=>{
-      const np=p.concat([{field,value:name}]);
+      const np=p.concat(plan.skipped,[{field,value:name}]);
       const sub=list.filter(e=>val(e,field)===name);
       const box=groupBox(field,name,ct,leadOf(sub),isLeafParent);
-      const below=hierarchy[np.length] ? `<div class="down"></div>`+chartBranch(np,sub) : "";
+      const below=planLevel(np.length,sub).field ? `<div class="down"></div>`+chartBranch(np,sub) : "";
       return `<div class="child"><div class="boxwrap" data-navpath="${esc(JSON.stringify(np))}">${box}</div>${below}</div>`;
     });
     const cls = cells.length===1 ? "children single" : "children chart-row";
@@ -360,11 +418,11 @@
   /* ---- main render ---- */
   function render(){
     stats();
+    _moveOptsCache=null;                 // rebuild move-picker once per render
     if(viewMode==="tree"){ renderTree(); return; }
     renderCrumbs(); renderSidebar();
     const tree=$("#tree");
     if(chartExpanded){ renderChartAll(); return; }
-    const field=currentField();
     const list=scoped();
     if(path.length===0 && hierarchy.length===0){
       // no hierarchy configured -> everyone as leaves
@@ -375,15 +433,17 @@
     }
     // lineageSpine() = apex + every ancestor down to the current node, so the
     // parent chain is always visible (Chairman › Facilities Mgmt › Fleet › …)
-    if(field){ // group level
-      const isLeafParent = (path.length === hierarchy.length-1);
-      const groups = groupsAt(field, list);
+    const plan = planLevel(path.length, list);   // skip redundant single-group levels
+    if(plan.field){ // group level
+      const f = plan.field;
+      const isLeafParent = (plan.depth === hierarchy.length-1);
+      const groups = groupsAt(f, list);
       const boxes = groups.map(([name,ct])=>{
-        const sub = list.filter(e=>val(e,field)===name);
-        return groupBox(field,name,ct,leadOf(sub),isLeafParent);
+        const sub = list.filter(e=>val(e,f)===name);
+        return groupBox(f,name,ct,leadOf(sub),isLeafParent);
       });
       tree.innerHTML = lineageSpine()+`<div class="down"></div>`+childrenRow(boxes);
-      wireSpine(); wireBoxes(field); adjustBar();
+      wireSpine(); wireBoxes(f, plan.skipped); adjustBar();
     } else { // leaf: employees
       const people=list.slice().sort(bySeniority);
       tree.innerHTML = lineageSpine()+`<div class="down"></div>`+
@@ -404,10 +464,11 @@
   window.addEventListener("resize",()=>{ if(currentField()) adjustBar(); });
 
   /* ---- wiring ---- */
-  function wireBoxes(field){
+  function wireBoxes(field, skipped){
+    skipped = skipped || [];
     $$(".box").forEach(b=>{
       const name=b.dataset.name;
-      b.onclick=()=>{ path=path.concat([{field,value:name}]); render(); $(".stage").scrollTop=0; };
+      b.onclick=()=>{ path=path.concat(skipped, [{field,value:name}]); render(); $(".stage").scrollTop=0; };
     });
   }
   function wireCards(){
@@ -417,20 +478,35 @@
       c.ondragstart=(ev)=>{ev.dataTransfer.setData("text/plain",id);ev.dataTransfer.effectAllowed="move";c.classList.add("dragging");};
       c.ondragend=()=>c.classList.remove("dragging");
     });
-    $$(".ecard select").forEach(sel=>{
-      sel.onchange=()=>{ if(sel.value) reassign(+sel.dataset.id, sel.dataset.field, sel.value); };
+    $$(".ecard select.movesel").forEach(sel=>{
+      const fill=()=>{ if(sel.dataset.empty){ sel.insertAdjacentHTML("beforeend", moveOptionsHTML()); delete sel.dataset.empty; } };
+      sel.addEventListener("mousedown",fill);
+      sel.addEventListener("focus",fill);
+      sel.onchange=()=>{ if(sel.value) moveToNode(+sel.dataset.id, parsePathKey(sel.value)); };
     });
     $$("[data-edit]").forEach(btn=>btn.onclick=()=>openEditor(+btn.dataset.edit));
   }
 
-  /* ---- reassign (set a field's value) ---- */
-  function reassign(id, field, value){
-    const e=EMP.find(x=>x._id===id); if(!e||val(e,field)===value)return;
-    const from=val(e,field); e[field]=value; editCount++;
-    saveDraft(); toast(`${e.name}: ${fieldLabel(field)} → ${value}`,`was ${from}`); render();
-    const u=document.querySelector(`.unit[data-name="${cssEsc(value)}"]`);
-    if(u){u.classList.remove("flash");void u.offsetWidth;u.classList.add("flash");}
-    const bx=document.querySelector(`.box[data-name="${cssEsc(value)}"]`);
+  /* ---- move: transfer a person to a COMPLETE existing node ----
+     Sets every field along targetPath, then fills any deeper level with a real
+     existing child so we never create an orphan combo (e.g. Vision Office › SAP).
+     Records each field change in the log. */
+  function moveToNode(id, targetPath){
+    const e=EMP.find(x=>x._id===id); if(!e) return;
+    const changes=[];
+    targetPath.forEach(p=>{ const from=val(e,p.field); if(from!==p.value){ changes.push({field:p.field,from,to:p.value}); e[p.field]=p.value; } });
+    let list=EMP.filter(x=>x._id!==id && targetPath.every(p=>val(x,p.field)===p.value));
+    for(let d=targetPath.length; d<hierarchy.length; d++){
+      const f=hierarchy[d], g=groupsAt(f,list), cur=val(e,f);
+      if(g.length && !g.some(([v])=>v===cur)){ const to=g[0][0]; changes.push({field:f,from:cur,to}); e[f]=to; }
+      list=list.filter(x=>val(x,f)===val(e,f));
+    }
+    if(!changes.length){ toast(`${e.name} is already there`); return; }
+    editCount++; logChange("Move", e, changes); saveDraft();
+    const dest=hierarchy.map(f=>val(e,f)).filter(v=>v&&v!=="—").join(" › ");
+    toast(`${e.name} → ${dest}`, changes.map(c=>fieldLabel(c.field)+": "+c.from+" → "+c.to).join("; "));
+    render();
+    const bx=document.querySelector(`.box[data-name="${cssEsc(targetPath[targetPath.length-1].value)}"]`);
     if(bx){bx.classList.remove("flash");void bx.offsetWidth;bx.classList.add("flash");}
   }
 
@@ -485,11 +561,15 @@
     if(!data.name){ toast("Name is required"); return; }
     if(editingId==null){
       const nextId=(EMP.reduce((m,e)=>Math.max(m,e._id),-1))+1;
-      EMP.push({...data,_id:nextId}); editCount++;
+      const rec={...data,_id:nextId}; EMP.push(rec); editCount++;
+      logChange("Add", rec, [{field:"Person added", from:"—", to:`${data.position||""}`.trim()||"new record"}]);
       toast(`Added ${data.name}`);
     } else {
       const e=EMP.find(x=>x._id===editingId);
+      const diffs=FIELDS.map(f=>({field:f.key,from:val(e,f.key),to:(data[f.key]==null||data[f.key]==="")?"—":data[f.key]}))
+        .filter(c=>c.from!==c.to);
       Object.assign(e,data); editCount++;
+      if(diffs.length) logChange("Edit", e, diffs);
       toast(`Saved ${data.name}`);
     }
     $("#emp-overlay").classList.remove("show");
@@ -499,9 +579,39 @@
     if(editingId==null) return;
     const e=EMP.find(x=>x._id===editingId);
     if(!confirm(`Remove ${e.name} from the organisation?`)) return;
+    logChange("Remove", e, [{field:"Person removed", from:`${val(e,"position")} · ${hierarchy.map(f=>val(e,f)).join(" › ")}`, to:"—"}]);
     EMP=EMP.filter(x=>x._id!==editingId); editCount++;
     $("#emp-overlay").classList.remove("show");
     saveDraft(); render(); toast(`Removed ${e.name}`);
+  }
+
+  /* ---- change log panel (separate "tab") ---- */
+  function openLog(){ renderLog(); $("#log-overlay").classList.add("show"); }
+  function renderLog(){
+    const body=$("#log-body");
+    if(!changeLog.length){
+      body.innerHTML=`<p class="note" style="margin-top:0">No changes yet. Every move, edit, add or removal you make is recorded here as <b>As-is → To-be</b>, so you can review the whole set before publishing.</p>`;
+      return;
+    }
+    const rows=changeLog.slice().reverse().map(c=>`<tr>
+      <td class="lg-t">${esc(new Date(c.ts).toLocaleString())}</td>
+      <td><span class="lg-type lg-${esc(String(c.type).toLowerCase())}">${esc(c.type)}</span></td>
+      <td>${esc(c.name)} <span class="lg-id">#${esc(c.emp_no)}</span></td>
+      <td>${esc(c.field)}</td>
+      <td class="lg-from">${esc(String(c.from))}</td>
+      <td class="lg-to">${esc(String(c.to))}</td>
+    </tr>`).join("");
+    body.innerHTML=`<div class="lg-wrap"><table class="lg">
+      <thead><tr><th>When</th><th>Action</th><th>Employee</th><th>Field</th><th>As-is</th><th>To-be</th></tr></thead>
+      <tbody>${rows}</tbody></table></div>
+      <p class="note">${changeLog.length} change${changeLog.length===1?"":"s"} recorded. Export for a side-by-side as-is / to-be sheet.</p>`;
+  }
+  function exportLog(){
+    const cols=["When","Action","Emp No","Employee","Field","As-is","To-be"];
+    const cell=v=>{v=(v==null?"":String(v));return /[",\r\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};
+    const rows=changeLog.map(c=>[new Date(c.ts).toLocaleString(),c.type,c.emp_no,c.name,c.field,c.from,c.to].map(cell).join(","));
+    download("organogram-changes.csv","﻿"+[cols.join(","),...rows].join("\r\n"),"text/csv;charset=utf-8");
+    toast("Exported change log");
   }
 
   /* ---- settings: hierarchy editor ---- */
@@ -598,8 +708,8 @@
     const be=$("#banner-export"); if(be) be.onclick=exportEmployeesJS;
     const bd=$("#banner-discard"); if(bd) bd.onclick=()=>{
       if(!confirm("Discard local edits and return to the published data?"))return;
-      try{localStorage.removeItem(LS_KEY);}catch(e){}
-      EMP=reindex(RAW); editCount=0; path=[]; refreshBanner(); render(); toast("Local edits discarded");
+      try{localStorage.removeItem(LS_KEY);localStorage.removeItem(LS_LOG);}catch(e){}
+      EMP=reindex(RAW); editCount=0; changeLog=[]; updateChangesBadge(); path=[]; refreshBanner(); render(); toast("Local edits discarded");
     };
     // view switcher: Chart (drill, with parent lineage) <-> Hierarchy (outline).
     // Available to everyone, including read-only viewers.
@@ -609,14 +719,21 @@
     // Chart view: blow open / collapse every branch at once
     const ce=$("#chart-expand");
     if(ce) ce.onclick=()=>{ if(viewMode!=="drill") setView("drill"); setChartExpanded(!chartExpanded); render(); $(".stage").scrollTop=0; $(".stage").scrollLeft=0; };
-    // editor modal
+    // editor modal + change log
     if(EDIT){
       $("#add-btn").onclick=()=>openEditor(null);
       $("#settings-btn").onclick=openSettings;
       $("#emp-save").onclick=saveEditor;
       $("#emp-delete").onclick=deleteEditor;
+      const cb=$("#changes-btn"); if(cb) cb.onclick=openLog;
+      const lx=$("#log-export"); if(lx) lx.onclick=exportLog;
+      const lc=$("#log-clear"); if(lc) lc.onclick=()=>{
+        if(!changeLog.length||!confirm("Clear the entire change log?"))return;
+        changeLog=[]; saveDraft(); updateChangesBadge(); renderLog(); toast("Change log cleared");
+      };
+      updateChangesBadge();
     }
-    $$("[data-close]").forEach(x=>x.onclick=()=>{$("#emp-overlay").classList.remove("show");$("#set-overlay").classList.remove("show");});
+    $$("[data-close]").forEach(x=>x.onclick=()=>$$(".overlay").forEach(o=>o.classList.remove("show")));
     $$(".overlay").forEach(o=>o.onclick=(e)=>{ if(e.target===o) o.classList.remove("show"); });
     document.addEventListener("keydown",e=>{ if(e.key==="Escape"){$$(".overlay").forEach(o=>o.classList.remove("show"));results.classList.remove("show");} });
   }

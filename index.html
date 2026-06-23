@@ -33,6 +33,7 @@
       <button data-view="tree">☰ Hierarchy</button>
     </div>
     <button class="btn" id="chart-expand">⊞ Expand all</button>
+    <button class="btn edit-only" id="changes-btn">⇄ Changes (<span id="changes-ct">0</span>)</button>
     <button class="btn edit-only" id="add-btn">＋ Add</button>
     <button class="btn edit-only" id="settings-btn">⚙ Hierarchy</button>
     <div class="menu">
@@ -96,6 +97,20 @@
       <p class="note">To make this the permanent default, click <b>Export → js/config.js</b> and commit the file.</p>
     </div>
     <div class="modal-foot"><span class="sp"></span><button class="mbtn primary" data-close>Done</button></div>
+  </div>
+</div>
+
+<!-- Change log ("separate tab": as-is → to-be of every movement) -->
+<div class="overlay" id="log-overlay">
+  <div class="modal modal-wide">
+    <div class="modal-head"><h3>Change log — As-is → To-be</h3><button class="modal-x" data-close>×</button></div>
+    <div class="modal-body" id="log-body"></div>
+    <div class="modal-foot">
+      <button class="mbtn danger" id="log-clear">Clear log</button>
+      <span class="sp"></span>
+      <button class="mbtn subtle" id="log-export">⤓ Export changes (.csv)</button>
+      <button class="mbtn primary" data-close>Close</button>
+    </div>
   </div>
 </div>
 
