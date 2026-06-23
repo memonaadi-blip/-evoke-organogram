@@ -63,6 +63,7 @@ header{display:flex;align-items:center;gap:18px;padding:12px 22px;flex:none;colo
   color:rgba(255,255,255,.82);padding:6px 13px;border-radius:7px;cursor:pointer;white-space:nowrap;transition:.14s}
 .viewseg button:hover{color:#fff}
 .viewseg button.active{background:#fff;color:var(--green-2);font-weight:600}
+body.treemode #chart-expand{display:none}
 .menu{position:relative}
 .menu-pop{position:absolute;right:0;top:44px;background:var(--card);border:1px solid var(--line);border-radius:11px;
   box-shadow:var(--shadow-lg);min-width:215px;z-index:45;display:none;overflow:hidden}
@@ -146,6 +147,15 @@ body.treemode .tree{align-items:stretch}
 .children.grid .child{align-items:stretch}
 .children.grid .child::before{display:none}
 .children.grid .box{max-width:none;width:100%}
+
+/* fully-expanded chart ("Expand all" in Chart view) — a scrollable canvas */
+.chart-canvas{display:inline-flex;flex-direction:column;align-items:center;min-width:100%}
+body.chart-expanded .tree{align-items:flex-start}
+.children.chart-row{display:flex;gap:18px;align-items:flex-start;position:relative;padding-top:28px;width:max-content}
+.children.chart-row::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;background:var(--conn)}
+.children.chart-row > .child::before{content:"";position:absolute;top:-28px;left:50%;transform:translateX(-50%);
+  height:28px;width:2px;background:var(--conn)}
+.boxwrap{display:contents}
 
 /* group cards */
 .box{position:relative;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);

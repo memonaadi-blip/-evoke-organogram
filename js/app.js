@@ -253,6 +253,7 @@
 
   /* ---- outline / "expand the whole organogram at once" view ---- */
   let viewMode = "drill";          // "drill" = step-by-step chart; "tree" = full outline
+  let chartExpanded = false;       // Chart view: every branch blown open at once
   const expanded = new Set();      // open node keys in outline mode
   function nodeKey(p){ return p.map(x=>x.field+"="+x.value).join("|"); }
   function allGroupKeys(){
@@ -271,6 +272,42 @@
     viewMode=m;
     document.body.classList.toggle("treemode", m==="tree");
     $$("#viewseg button").forEach(b=>b.classList.toggle("active", b.dataset.view===m));
+    syncChartExpandBtn();
+  }
+  function syncChartExpandBtn(){
+    const ce=$("#chart-expand"); if(ce) ce.textContent = chartExpanded ? "⊟ Collapse" : "⊞ Expand all";
+  }
+  function setChartExpanded(v){
+    chartExpanded=v;
+    document.body.classList.toggle("chart-expanded", v);
+    syncChartExpandBtn();
+  }
+  /* one branch of the fully-expanded chart: a group box with its whole
+     sub-tree (sections, etc.) connected beneath it, recursing to the leaves */
+  function chartBranch(p, list){
+    const field=hierarchy[p.length];
+    if(!field) return "";                       // people are the leaves; not drawn as boxes
+    const isLeafParent=(p.length===hierarchy.length-1);
+    const cells=groupsAt(field,list).map(([name,ct])=>{
+      const np=p.concat([{field,value:name}]);
+      const sub=list.filter(e=>val(e,field)===name);
+      const box=groupBox(field,name,ct,leadOf(sub),isLeafParent);
+      const below=hierarchy[np.length] ? `<div class="down"></div>`+chartBranch(np,sub) : "";
+      return `<div class="child"><div class="boxwrap" data-navpath="${esc(JSON.stringify(np))}">${box}</div>${below}</div>`;
+    });
+    const cls = cells.length===1 ? "children single" : "children chart-row";
+    return `<div class="${cls}">${cells.join("")}</div>`;
+  }
+  function renderChartAll(){
+    const tree=$("#tree");
+    tree.innerHTML = `<div class="chart-canvas">${apexNode()}<div class="down"></div>${chartBranch([],EMP)}</div>`;
+    const apex=$(".node.apex"); if(apex){ apex.style.cursor="default"; }
+    tree.querySelectorAll(".boxwrap[data-navpath]").forEach(w=>w.onclick=(e)=>{
+      e.stopPropagation();
+      setChartExpanded(false);            // clicking a branch focuses it in normal drill
+      path=JSON.parse(w.dataset.navpath);
+      render(); $(".stage").scrollTop=0; $(".stage").scrollLeft=0;
+    });
   }
   function treePerson(e,isLead,depth){
     return `<div class="tperson${isLead?" lead":""}" style="--d:${depth}">
@@ -326,6 +363,7 @@
     if(viewMode==="tree"){ renderTree(); return; }
     renderCrumbs(); renderSidebar();
     const tree=$("#tree");
+    if(chartExpanded){ renderChartAll(); return; }
     const field=currentField();
     const list=scoped();
     if(path.length===0 && hierarchy.length===0){
@@ -568,6 +606,9 @@
     $$("#viewseg button").forEach(b=>b.onclick=()=>{
       if(b.dataset.view!==viewMode){ setView(b.dataset.view); render(); $(".stage").scrollTop=0; }
     });
+    // Chart view: blow open / collapse every branch at once
+    const ce=$("#chart-expand");
+    if(ce) ce.onclick=()=>{ if(viewMode!=="drill") setView("drill"); setChartExpanded(!chartExpanded); render(); $(".stage").scrollTop=0; $(".stage").scrollLeft=0; };
     // editor modal
     if(EDIT){
       $("#add-btn").onclick=()=>openEditor(null);
