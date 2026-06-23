@@ -168,13 +168,29 @@
       <div class="hc">▦ ${EMP.length.toLocaleString()} employees${topField?` · ${units} ${esc(fieldLabel(topField).toLowerCase())}s`:""}</div>
     </div>`;
   }
-  function parentHeader(){
-    const last=path[path.length-1];
-    return `<div class="node">
-      <div class="role-eyebrow">${esc(fieldLabel(last.field))}</div>
-      <div class="nm">${esc(last.value)}</div>
-      <div class="hc">▦ ${scoped().length.toLocaleString()} people</div>
+  /* a single ancestor (or current) node in the vertical lineage spine */
+  function lineageNode(i){
+    const p=path[i], isCurrent=(i===path.length-1);
+    const cnt=EMP.filter(e=>path.slice(0,i+1).every(q=>val(e,q.field)===q.value)).length;
+    return `<div class="node lineage${isCurrent?" current":""}" data-nav="${i}">
+      <div class="role-eyebrow">${esc(fieldLabel(p.field))}</div>
+      <div class="nm">${esc(p.value)}</div>
+      <div class="hc">▦ ${cnt.toLocaleString()} people</div>
     </div>`;
+  }
+  /* the whole chain from the top down to (and including) the current node,
+     so you always see a node's parents, e.g. Chairman › Facilities › Fleet */
+  function lineageSpine(){
+    let h=apexNode();
+    for(let i=0;i<path.length;i++) h+=`<div class="down"></div>`+lineageNode(i);
+    return h;
+  }
+  function wireSpine(){
+    const apex=$(".node.apex"); if(apex){ apex.style.cursor="pointer";
+      apex.onclick=()=>{ path=[]; render(); $(".stage").scrollTop=0; }; }
+    $$(".node.lineage[data-nav]").forEach(n=>n.onclick=()=>{
+      const i=+n.dataset.nav; path=path.slice(0,i+1); render(); $(".stage").scrollTop=0;
+    });
   }
   function groupBox(field,name,count,lead,isLeafParent){
     return `<div class="box" data-name="${esc(name)}">
@@ -254,7 +270,7 @@
   function setView(m){
     viewMode=m;
     document.body.classList.toggle("treemode", m==="tree");
-    const vb=$("#view-btn"); if(vb) vb.textContent = m==="tree" ? "▭ Chart view" : "☰ Expand all";
+    $$("#viewseg button").forEach(b=>b.classList.toggle("active", b.dataset.view===m));
   }
   function treePerson(e,isLead,depth){
     return `<div class="tperson${isLead?" lead":""}" style="--d:${depth}">
@@ -317,8 +333,10 @@
       tree.innerHTML = apexNode()+`<div class="down"></div>`+
         `<div class="grouphdr">All people · senior first</div>`+
         `<div class="emps">${list.slice().sort(bySeniority).map((e,i)=>empCard(e,false)).join("")}</div>`;
-      wireCards(); return;
+      wireSpine(); wireCards(); return;
     }
+    // lineageSpine() = apex + every ancestor down to the current node, so the
+    // parent chain is always visible (Chairman › Facilities Mgmt › Fleet › …)
     if(field){ // group level
       const isLeafParent = (path.length === hierarchy.length-1);
       const groups = groupsAt(field, list);
@@ -326,15 +344,14 @@
         const sub = list.filter(e=>val(e,field)===name);
         return groupBox(field,name,ct,leadOf(sub),isLeafParent);
       });
-      const head = path.length===0 ? apexNode() : parentHeader();
-      tree.innerHTML = head+`<div class="down"></div>`+childrenRow(boxes);
-      wireBoxes(field); adjustBar();
+      tree.innerHTML = lineageSpine()+`<div class="down"></div>`+childrenRow(boxes);
+      wireSpine(); wireBoxes(field); adjustBar();
     } else { // leaf: employees
       const people=list.slice().sort(bySeniority);
-      tree.innerHTML = parentHeader()+`<div class="down"></div>`+
+      tree.innerHTML = lineageSpine()+`<div class="down"></div>`+
         `<div class="grouphdr">People · senior first</div>`+
         `<div class="emps">${people.map((e,i)=>empCard(e,i===0&&people.length>1)).join("")}</div>`;
-      wireCards();
+      wireSpine(); wireCards();
     }
   }
 
@@ -546,9 +563,11 @@
       try{localStorage.removeItem(LS_KEY);}catch(e){}
       EMP=reindex(RAW); editCount=0; path=[]; refreshBanner(); render(); toast("Local edits discarded");
     };
-    // view toggle: step-by-step chart <-> full outline (available to everyone)
-    const vb=$("#view-btn");
-    if(vb) vb.onclick=()=>{ setView(viewMode==="tree"?"drill":"tree"); render(); $(".stage").scrollTop=0; };
+    // view switcher: Chart (drill, with parent lineage) <-> Hierarchy (outline).
+    // Available to everyone, including read-only viewers.
+    $$("#viewseg button").forEach(b=>b.onclick=()=>{
+      if(b.dataset.view!==viewMode){ setView(b.dataset.view); render(); $(".stage").scrollTop=0; }
+    });
     // editor modal
     if(EDIT){
       $("#add-btn").onclick=()=>openEditor(null);

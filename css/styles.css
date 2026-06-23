@@ -56,6 +56,13 @@ header{display:flex;align-items:center;gap:18px;padding:12px 22px;flex:none;colo
 .btn.gold{background:var(--gold);border-color:var(--gold);color:#231806;font-weight:600}
 .btn.gold:hover{background:#d2962f}
 .btn:disabled{opacity:.45;cursor:not-allowed}
+/* segmented view switcher (Chart / Hierarchy) */
+.viewseg{display:inline-flex;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);
+  border-radius:9px;padding:2px;gap:2px}
+.viewseg button{font:inherit;font-size:var(--fs-sm);font-weight:500;border:none;background:none;
+  color:rgba(255,255,255,.82);padding:6px 13px;border-radius:7px;cursor:pointer;white-space:nowrap;transition:.14s}
+.viewseg button:hover{color:#fff}
+.viewseg button.active{background:#fff;color:var(--green-2);font-weight:600}
 .menu{position:relative}
 .menu-pop{position:absolute;right:0;top:44px;background:var(--card);border:1px solid var(--line);border-radius:11px;
   box-shadow:var(--shadow-lg);min-width:215px;z-index:45;display:none;overflow:hidden}
@@ -119,6 +126,11 @@ body.treemode .tree{align-items:stretch}
 .node .sub{font-size:var(--fs-sm);color:var(--muted);margin-top:3px}
 .node .hc{display:inline-flex;align-items:center;gap:6px;margin-top:10px;font-size:var(--fs-sm);color:var(--green-2);
   background:var(--green-soft);border-radius:20px;padding:4px 12px;font-weight:600}
+/* lineage (ancestor chain) nodes shown above the current level */
+.node.lineage{cursor:pointer;padding:12px 18px;min-width:210px;transition:.14s}
+.node.lineage:hover{border-color:var(--conn);box-shadow:var(--shadow-lg);transform:translateY(-1px)}
+.node.lineage .nm{font-size:var(--fs-lg)}
+.node.lineage.current{border:1.5px solid var(--gold);background:linear-gradient(180deg,#fffdf7,#fff)}
 
 .down{width:2px;height:28px;background:var(--conn)}
 .children{display:flex;gap:18px;align-items:flex-start;position:relative;padding-top:28px}
