@@ -34,6 +34,7 @@
     </div>
     <button class="btn" id="chart-expand">⊞ Expand all</button>
     <button class="btn edit-only" id="changes-btn">⇄ Changes (<span id="changes-ct">0</span>)</button>
+    <button class="btn edit-only" id="compare-btn">⇆ As-is/To-be</button>
     <button class="btn edit-only" id="add-btn">＋ Add</button>
     <button class="btn edit-only" id="settings-btn">⚙ Hierarchy</button>
     <div class="menu">
@@ -109,6 +110,19 @@
       <button class="mbtn danger" id="log-clear">Clear log</button>
       <span class="sp"></span>
       <button class="mbtn subtle" id="log-export">⤓ Export changes (.csv)</button>
+      <button class="mbtn primary" data-close>Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- As-is vs To-be comparison ("another screen where as-is is stored") -->
+<div class="overlay" id="cmp-overlay">
+  <div class="modal modal-wide">
+    <div class="modal-head"><h3>As-is vs To-be</h3><button class="modal-x" data-close>×</button></div>
+    <div class="modal-body" id="cmp-body"></div>
+    <div class="modal-foot">
+      <span class="sp"></span>
+      <button class="mbtn subtle" id="cmp-export">⤓ Export (.csv)</button>
       <button class="mbtn primary" data-close>Close</button>
     </div>
   </div>

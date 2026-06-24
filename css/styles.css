@@ -315,6 +315,14 @@ table.lg tbody tr:hover{background:#faf8f2}
 .lg-id{color:#b7ad97;font-family:"Space Grotesk",sans-serif;font-size:var(--fs-xs)}
 .lg-from{color:var(--danger)}
 .lg-to{color:var(--good);font-weight:600}
+.cmpd{font-family:"Space Grotesk",sans-serif;font-weight:600;text-align:right}
+.cmpd.up{color:var(--good)} .cmpd.down{color:var(--danger)}
+table.cmp td:nth-child(n+2){text-align:right;font-variant-numeric:tabular-nums}
+table.cmp th:nth-child(n+2){text-align:right}
+.cmp-add{background:#f2faf4} .cmp-rem{background:#fdf4f3}
+.cmp-total td{border-top:2px solid var(--green);font-weight:700;background:var(--green-soft)}
+.cmp-tag{font-size:9px;font-weight:700;text-transform:uppercase;border-radius:4px;padding:1px 5px}
+.cmp-tag.add{background:var(--green-soft);color:var(--green-2)} .cmp-tag.rem{background:#f7dedb;color:var(--danger)}
 .lg-type{font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;border-radius:5px;padding:2px 7px}
 .lg-move{background:var(--gold-soft);color:#7a5212}
 .lg-edit{background:#e3edf7;color:#2c5e8c}

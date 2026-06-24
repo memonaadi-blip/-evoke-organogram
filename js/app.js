@@ -45,7 +45,7 @@
   const numv = (v)=>{ const n=Number(v); return isFinite(n)?n:0; };
   const money = (n)=> "Rs " + Math.round(numv(n)).toLocaleString();
   function moneyShort(n){ n=Math.round(numv(n)); const a=Math.abs(n);
-    if(a>=1e7) return "Rs "+(n/1e6).toFixed(1)+"M"; if(a>=1e5) return "Rs "+(n/1e3).toFixed(0)+"K";
+    if(a>=1e6) return "Rs "+(n/1e6).toFixed(1)+"M"; if(a>=1e3) return "Rs "+(n/1e3).toFixed(0)+"K";
     return "Rs "+n.toLocaleString(); }
   function fmtDate(s){ if(!s) return "—"; const d=new Date(s); return isNaN(d)? String(s)
     : d.toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"}); }
@@ -740,6 +740,57 @@
     toast("Exported change log");
   }
 
+  /* ---- As-is vs To-be comparison ----
+     RAW = the published (committed) data = baseline "as-is".
+     EMP = the current working set = "to-be". Compared by the top level. */
+  function aggBy(arr, field){
+    const m=new Map();
+    for(const e of arr){ const k=(e[field]==null||e[field]==="")?"—":e[field];
+      const o=m.get(k)||{n:0,g:0,p:0}; o.n++; o.g+=numv(e.gross); o.p+=numv(e.net); m.set(k,o); }
+    return m;
+  }
+  function compareRows(){
+    const field=hierarchy[0]||"department";
+    const A=aggBy(RAW,field), B=aggBy(EMP,field);
+    const keys=[...new Set([...A.keys(),...B.keys()])].sort();
+    return {field, A, B, keys};
+  }
+  function openCompare(){ renderCompare(); $("#cmp-overlay").classList.add("show"); }
+  function renderCompare(){
+    const {field,A,B,keys}=compareRows();
+    const dcell=(d,money)=>{ const cls=d>0?"up":d<0?"down":""; const s=d>0?"+":"";
+      return `<td class="cmpd ${cls}">${d? s+(money?moneyShort(d):d) : "—"}</td>`; };
+    const rows=keys.map(k=>{
+      const a=A.get(k), b=B.get(k);
+      const tag=!a?' <span class="cmp-tag add">new</span>':(!b?' <span class="cmp-tag rem">removed</span>':"");
+      return `<tr class="${!a?"cmp-add":(!b?"cmp-rem":"")}">
+        <td>${esc(k)}${tag}</td>
+        <td>${a?a.n:0}</td><td>${b?b.n:0}</td>${dcell((b?b.n:0)-(a?a.n:0),false)}
+        <td>${a?moneyShort(a.p):"—"}</td><td>${b?moneyShort(b.p):"—"}</td>${dcell((b?b.p:0)-(a?a.p:0),true)}
+      </tr>`;
+    }).join("");
+    const ta=sumPay(RAW), tb=sumPay(EMP);
+    const totals=`<tr class="cmp-total">
+      <td>TOTAL</td><td>${RAW.length}</td><td>${EMP.length}</td>${dcell(EMP.length-RAW.length,false)}
+      <td>${moneyShort(ta.n)}</td><td>${moneyShort(tb.n)}</td>${dcell(tb.n-ta.n,true)}</tr>`;
+    $("#cmp-body").innerHTML=`<p class="note" style="margin-top:0">Baseline (<b>As-is</b>) is the published data; <b>To-be</b> is your current working set, compared by ${esc(fieldLabel(field))}.</p>
+      <div class="lg-wrap"><table class="lg cmp">
+      <thead><tr><th>${esc(fieldLabel(field))}</th><th>As-is ppl</th><th>To-be ppl</th><th>Δ</th>
+        <th>As-is pay</th><th>To-be pay</th><th>Δ pay</th></tr></thead>
+      <tbody>${rows}${totals}</tbody></table></div>`;
+  }
+  function exportCompare(){
+    const {field,A,B,keys}=compareRows();
+    const cell=v=>{v=(v==null?"":String(v));return /[",\r\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};
+    const head=[fieldLabel(field),"As-is people","To-be people","Δ people","As-is payment","To-be payment","Δ payment"];
+    const rows=keys.map(k=>{const a=A.get(k),b=B.get(k);
+      return [k,a?a.n:0,b?b.n:0,(b?b.n:0)-(a?a.n:0),a?a.p:0,b?b.p:0,(b?b.p:0)-(a?a.p:0)].map(cell).join(",");});
+    const ta=sumPay(RAW),tb=sumPay(EMP);
+    rows.push(["TOTAL",RAW.length,EMP.length,EMP.length-RAW.length,ta.n,tb.n,tb.n-ta.n].map(cell).join(","));
+    download("organogram-asis-vs-tobe.csv","﻿"+[head.join(","),...rows].join("\r\n"),"text/csv;charset=utf-8");
+    toast("Exported As-is vs To-be");
+  }
+
   /* ---- settings: hierarchy editor ---- */
   function openSettings(){ renderLevels(); $("#set-overlay").classList.add("show"); }
   function renderLevels(){
@@ -854,6 +905,8 @@
       const gmv=$("#gm-move"); if(gmv) gmv.onclick=()=>doGroupMove("move");
       const gcp=$("#gm-copy"); if(gcp) gcp.onclick=()=>doGroupMove("copy");
       const cb=$("#changes-btn"); if(cb) cb.onclick=openLog;
+      const cmpb=$("#compare-btn"); if(cmpb) cmpb.onclick=openCompare;
+      const cmpx=$("#cmp-export"); if(cmpx) cmpx.onclick=exportCompare;
       const lx=$("#log-export"); if(lx) lx.onclick=exportLog;
       const lc=$("#log-clear"); if(lc) lc.onclick=()=>{
         if(!changeLog.length||!confirm("Clear the entire change log?"))return;
