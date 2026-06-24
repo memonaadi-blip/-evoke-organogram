@@ -114,6 +114,31 @@
   </div>
 </div>
 
+<!-- Generic choice dialog (move scope, deletes) -->
+<div class="overlay" id="choice-overlay">
+  <div class="modal">
+    <div class="modal-head"><h3 id="choice-title">Confirm</h3><button class="modal-x" data-close>×</button></div>
+    <div class="modal-body"><p class="note" id="choice-msg" style="margin-top:0"></p></div>
+    <div class="modal-foot"><span class="sp"></span><div id="choice-foot" style="display:flex;gap:10px;flex-wrap:wrap"></div></div>
+  </div>
+</div>
+
+<!-- Move / copy an entire department or section -->
+<div class="overlay" id="gm-overlay">
+  <div class="modal">
+    <div class="modal-head"><h3 id="gm-title">Move group</h3><button class="modal-x" data-close>×</button></div>
+    <div class="modal-body">
+      <p class="note" id="gm-msg" style="margin-top:0"></p>
+      <div class="field"><label>Destination department</label><select id="gm-target"></select></div>
+    </div>
+    <div class="modal-foot">
+      <span class="sp"></span>
+      <button class="mbtn subtle" id="gm-copy">Copy here</button>
+      <button class="mbtn primary" id="gm-move">Move here</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast"><span class="dot"></span><span id="toast-msg"></span></div>
 
 <!-- data first, then config, then app -->

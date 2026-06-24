@@ -185,7 +185,14 @@
     for(const e of list){ const k=val(e,field); m.set(k,(m.get(k)||0)+1); }
     return [...m.entries()].sort((a,b)=>b[1]-a[1]);
   }
-  function leadOf(list){ return list.slice().sort(bySeniority)[0]; }
+  function leadOf(list){ return list.find(e=>e.is_lead) || list.slice().sort(bySeniority)[0]; }
+  /* people sorted senior-first, but the (manual or inferred) Lead pinned to top */
+  function peopleSorted(list){
+    const arr=list.slice().sort(bySeniority);
+    const lead=leadOf(list);
+    if(lead){ const i=arr.indexOf(lead); if(i>0){ arr.splice(i,1); arr.unshift(lead); } }
+    return {arr, lead};
+  }
   function topPerson(){ return EMP.slice().sort(bySeniority)[0]; }
 
   /* ---- stats ---- */
@@ -265,8 +272,12 @@
       const i=+n.dataset.nav; path=path.slice(0,i+1); render(); $(".stage").scrollTop=0;
     });
   }
-  function groupBox(field,name,count,lead,isLeafParent,tot){
-    return `<div class="box" data-name="${esc(name)}">
+  function groupBox(field,name,count,lead,isLeafParent,tot,acts){
+    return `<div class="box" data-name="${esc(name)}" data-field="${esc(field)}">
+      ${acts&&EDIT?`<div class="box-acts edit-only">
+        <button class="bx-move" title="Move / copy this ${esc(fieldLabel(field))}">↪</button>
+        <button class="bx-del" title="Delete this ${esc(fieldLabel(field))}">✕</button>
+      </div>`:""}
       <div class="swatch" style="background:${color(name)}"></div>
       <div class="bname">${esc(name)}</div>
       ${lead?`<div class="lead">${isLeafParent?"Senior":"Lead"}: <b>${esc(lead.name)}</b><span>${esc(lead.position)}</span></div>`:""}
@@ -292,7 +303,8 @@
         // options are filled lazily on first open (keeps big people lists fast)
         move=`<select class="movesel" data-id="${e._id}" data-empty="1" title="Move this person to another node"><option value="">Move to…</option></select>`;
       }
-      actions=`<div class="ec-actions">${move}<button class="iconbtn" data-edit="${e._id}">Edit</button></div>`;
+      const leadBtn=`<button class="iconbtn lead-btn${e.is_lead?" on":""}" data-lead="${e._id}" title="${e.is_lead?"Remove Lead":"Make Lead of this group"}">${e.is_lead?"★ Lead":"☆ Lead"}</button>`;
+      actions=`<div class="ec-actions">${move}${leadBtn}<button class="iconbtn" data-edit="${e._id}">Edit</button></div>`;
     }
     return `<div class="ecard${isLead?" lead":""}${drag?" draggable":""}"${drag?' draggable="true"':""} data-id="${e._id}">
       <span class="ec-id">#${esc(val(e,"emp_no"))}</span>
@@ -398,8 +410,8 @@
   function treeRows(p,list,depth){
     const field=hierarchy[p.length];
     if(!field){ // leaf -> people
-      const people=list.slice().sort(bySeniority);
-      return `<div class="tkids people" style="--d:${depth}">`+people.map((e,i)=>treePerson(e,i===0&&people.length>1,depth)).join("")+`</div>`;
+      const ld=peopleSorted(list);
+      return `<div class="tkids people" style="--d:${depth}">`+ld.arr.map(e=>treePerson(e, ld.arr.length>1 && e===ld.lead, depth)).join("")+`</div>`;
     }
     let html="";
     for(const [name,ct] of groupsAt(field,list)){
@@ -458,15 +470,15 @@
       const groups = groupsAt(f, list);
       const boxes = groups.map(([name,ct])=>{
         const sub = list.filter(e=>val(e,f)===name);
-        return groupBox(f,name,ct,leadOf(sub),isLeafParent,sumPay(sub));
+        return groupBox(f,name,ct,leadOf(sub),isLeafParent,sumPay(sub),true);
       });
       tree.innerHTML = lineageSpine()+`<div class="down"></div>`+childrenRow(boxes);
       wireSpine(); wireBoxes(f, plan.skipped); adjustBar();
     } else { // leaf: employees
-      const people=list.slice().sort(bySeniority);
+      const {arr,lead}=peopleSorted(list);
       tree.innerHTML = lineageSpine()+`<div class="down"></div>`+
         `<div class="grouphdr">People · senior first</div>`+
-        `<div class="emps">${people.map((e,i)=>empCard(e,i===0&&people.length>1)).join("")}</div>`;
+        `<div class="emps">${arr.map(e=>empCard(e, arr.length>1 && e===lead)).join("")}</div>`;
       wireSpine(); wireCards();
     }
   }
@@ -487,6 +499,8 @@
     $$(".box").forEach(b=>{
       const name=b.dataset.name;
       b.onclick=()=>{ path=path.concat(skipped, [{field,value:name}]); render(); $(".stage").scrollTop=0; };
+      const mv=b.querySelector(".bx-move"); if(mv) mv.onclick=(ev)=>{ev.stopPropagation(); openGroupMove(field,name,skipped);};
+      const dl=b.querySelector(".bx-del"); if(dl) dl.onclick=(ev)=>{ev.stopPropagation(); deleteGroup(field,name,skipped);};
     });
   }
   function wireCards(){
@@ -500,8 +514,21 @@
       const fill=()=>{ if(sel.dataset.empty){ sel.insertAdjacentHTML("beforeend", moveOptionsHTML()); delete sel.dataset.empty; } };
       sel.addEventListener("mousedown",fill);
       sel.addEventListener("focus",fill);
-      sel.onchange=()=>{ if(sel.value) moveToNode(+sel.dataset.id, parsePathKey(sel.value)); };
+      sel.onchange=async ()=>{
+        if(!sel.value) return;
+        const id=+sel.dataset.id, tp=parsePathKey(sel.value), e=EMP.find(x=>x._id===id);
+        const top=fieldLabel(hierarchy[0]);
+        const dest=tp.map(x=>x.value).join(" › ");
+        sel.value="";
+        const c=await choose(`Move ${e.name}`,
+          `Move to <b>${esc(dest)}</b>. Apply the move to…`,
+          [{label:`Whole hierarchy`, kind:"primary", value:"full"},
+           {label:`Just the ${esc(top)}`, kind:"subtle", value:"dept"}]);
+        if(c==="full") moveToNode(id, tp);
+        else if(c==="dept") moveToNode(id, [tp[0]], {fixDeeper:false});
+      };
     });
+    $$("[data-lead]").forEach(btn=>btn.onclick=()=>setLead(+btn.dataset.lead));
     $$("[data-edit]").forEach(btn=>btn.onclick=()=>openEditor(+btn.dataset.edit));
   }
 
@@ -509,12 +536,15 @@
      Sets every field along targetPath, then fills any deeper level with a real
      existing child so we never create an orphan combo (e.g. Vision Office › SAP).
      Records each field change in the log. */
-  function moveToNode(id, targetPath){
+  function moveToNode(id, targetPath, opts){
+    opts=opts||{};
     const e=EMP.find(x=>x._id===id); if(!e) return;
     const changes=[];
     targetPath.forEach(p=>{ const from=val(e,p.field); if(from!==p.value){ changes.push({field:p.field,from,to:p.value}); e[p.field]=p.value; } });
     let list=EMP.filter(x=>x._id!==id && targetPath.every(p=>val(x,p.field)===p.value));
-    for(let d=targetPath.length; d<hierarchy.length; d++){
+    // fixDeeper (default true): keep deeper levels a real existing node, no orphan.
+    // When false ("just a department") the rest of the person's path is left as-is.
+    for(let d=targetPath.length; opts.fixDeeper!==false && d<hierarchy.length; d++){
       const f=hierarchy[d], g=groupsAt(f,list), cur=val(e,f);
       if(g.length && !g.some(([v])=>v===cur)){ const to=g[0][0]; changes.push({field:f,from:cur,to}); e[f]=to; }
       list=list.filter(x=>val(x,f)===val(e,f));
@@ -526,6 +556,84 @@
     render();
     const bx=document.querySelector(`.box[data-name="${cssEsc(targetPath[targetPath.length-1].value)}"]`);
     if(bx){bx.classList.remove("flash");void bx.offsetWidth;bx.classList.add("flash");}
+  }
+
+  /* ---- generic choice dialog (returns a Promise of the chosen value) ---- */
+  function choose(title, msg, options){
+    return new Promise(res=>{
+      $("#choice-title").textContent=title;
+      $("#choice-msg").innerHTML=msg;
+      const foot=$("#choice-foot"); foot.innerHTML="";
+      const close=(v)=>{ $("#choice-overlay").classList.remove("show"); res(v); };
+      options.forEach(o=>{ const b=document.createElement("button");
+        b.className="mbtn "+(o.kind||"subtle"); b.textContent=o.label;
+        b.onclick=()=>close(o.value); foot.appendChild(b); });
+      const c=document.createElement("button"); c.className="mbtn subtle"; c.textContent="Cancel";
+      c.onclick=()=>close(null); foot.appendChild(c);
+      $("#choice-overlay").classList.add("show"); $("#choice-overlay").dataset.res="1";
+      $("#choice-overlay")._cancel=()=>close(null);
+    });
+  }
+
+  /* ---- assign / clear a manual Lead for a group ---- */
+  function setLead(id){
+    const e=EMP.find(x=>x._id===id); if(!e) return;
+    const groupPath=hierarchy.map(f=>({field:f,value:val(e,f)}));
+    const peers=EMP.filter(x=>groupPath.every(p=>val(x,p.field)===p.value));
+    if(e.is_lead){ delete e.is_lead; logChange("Lead", e, [{field:"Lead",from:"Lead",to:"—"}]); toast(`${e.name} is no longer the Lead`); }
+    else { peers.forEach(x=>{ if(x._id!==id) delete x.is_lead; }); e.is_lead=true;
+      logChange("Lead", e, [{field:"Lead",from:"—",to:"Lead of "+(groupPath[groupPath.length-1]||{}).value}]); toast(`${e.name} set as Lead`); }
+    editCount++; saveDraft(); render();
+  }
+
+  /* ---- move / copy an entire group (department or section) ---- */
+  function groupPeople(field, name, skipped){
+    const gp=path.concat(skipped||[], [{field,value:name}]);
+    return { gp, people: EMP.filter(e=>gp.every(p=>val(e,p.field)===p.value)) };
+  }
+  function openGroupMove(field, name, skipped){
+    const {people}=groupPeople(field,name,skipped);
+    const topField=hierarchy[0];
+    const targets=groupsAt(topField,EMP).map(([v])=>v).filter(v=>v!==name &&
+      !people.every(p=>val(p,topField)===v));   // exclude the current parent value
+    $("#gm-title").textContent=`Move ${fieldLabel(field)}: ${name}`;
+    $("#gm-msg").innerHTML=`<b>${people.length}</b> people. Choose the ${esc(fieldLabel(topField))} to move them under, then Move (relocate) or Copy (duplicate).`;
+    $("#gm-target").innerHTML=targets.map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join("");
+    $("#gm-overlay").dataset.field=field; $("#gm-overlay").dataset.name=name;
+    $("#gm-overlay").dataset.skipped=JSON.stringify(skipped||[]);
+    $("#gm-overlay").classList.add("show");
+  }
+  function doGroupMove(mode){
+    const ov=$("#gm-overlay"), field=ov.dataset.field, name=ov.dataset.name;
+    const skipped=JSON.parse(ov.dataset.skipped||"[]");
+    const target=$("#gm-target").value; const topField=hierarchy[0];
+    if(!target){ ov.classList.remove("show"); return; }
+    const {people}=groupPeople(field,name,skipped);
+    if(mode==="copy"){
+      let nextId=EMP.reduce((m,e)=>Math.max(m,e._id),-1);
+      people.forEach(src=>{ const {_id,...r}=src; r[topField]=target; EMP.push({...r,_id:++nextId}); });
+      logChange("Copy", {emp_no:"—",name:`${name} (${people.length})`}, [{field:fieldLabel(field),from:name,to:target+" › "+name}]);
+      toast(`Copied ${people.length} people of ${name} → ${target}`);
+    } else {
+      people.forEach(e=>{ e[topField]=target; });
+      logChange("Move", {emp_no:"—",name:`${name} (${people.length})`}, [{field:fieldLabel(topField),from:"(group)",to:target}]);
+      toast(`Moved ${people.length} people of ${name} → ${target}`);
+    }
+    editCount++; ov.classList.remove("show"); saveDraft(); render();
+  }
+  /* ---- delete a whole group (department / section) ---- */
+  async function deleteGroup(field, name, skipped){
+    const {people}=groupPeople(field,name,skipped);
+    const c=await choose(`Delete ${fieldLabel(field)}: ${name}`,
+      `This removes the <b>${people.length}</b> people in <b>${esc(name)}</b> from the organisation. This cannot be undone except via Discard.`,
+      [{label:`Delete ${people.length} people`, kind:"danger", value:"del"}]);
+    if(c!=="del") return;
+    const ids=new Set(people.map(p=>p._id));
+    EMP=EMP.filter(e=>!ids.has(e._id)); editCount++;
+    logChange("Remove", {emp_no:"—",name:`${name} (${people.length})`}, [{field:fieldLabel(field)+" deleted",from:name,to:"—"}]);
+    // step out if we were inside the deleted group
+    path=path.filter((p,i)=>!(p.field===field&&p.value===name));
+    saveDraft(); render(); toast(`Deleted ${name} (${people.length} people)`);
   }
 
   /* ---- employee editor / add ---- */
@@ -743,6 +851,8 @@
       $("#settings-btn").onclick=openSettings;
       $("#emp-save").onclick=saveEditor;
       $("#emp-delete").onclick=deleteEditor;
+      const gmv=$("#gm-move"); if(gmv) gmv.onclick=()=>doGroupMove("move");
+      const gcp=$("#gm-copy"); if(gcp) gcp.onclick=()=>doGroupMove("copy");
       const cb=$("#changes-btn"); if(cb) cb.onclick=openLog;
       const lx=$("#log-export"); if(lx) lx.onclick=exportLog;
       const lc=$("#log-clear"); if(lc) lc.onclick=()=>{
