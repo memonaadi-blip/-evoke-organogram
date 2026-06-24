@@ -127,6 +127,7 @@ body.treemode .tree{align-items:stretch}
 .node .sub{font-size:var(--fs-sm);color:var(--muted);margin-top:3px}
 .node .hc{display:inline-flex;align-items:center;gap:6px;margin-top:10px;font-size:var(--fs-sm);color:var(--green-2);
   background:var(--green-soft);border-radius:20px;padding:4px 12px;font-weight:600}
+.node .hc.money{background:var(--gold-soft);color:#7a5212;margin-top:6px}
 /* lineage (ancestor chain) nodes shown above the current level */
 .node.lineage{cursor:pointer;padding:12px 18px;min-width:210px;transition:.14s}
 .node.lineage:hover{border-color:var(--conn);box-shadow:var(--shadow-lg);transform:translateY(-1px)}
@@ -166,6 +167,9 @@ body.chart-expanded .tree{align-items:flex-start}
 .box .bname{font-family:"Space Grotesk",sans-serif;font-weight:600;font-size:15px;letter-spacing:-.01em;line-height:1.3;color:var(--ink)}
 .box .lead{font-size:var(--fs-xs);color:var(--muted);margin-top:8px;display:flex;flex-direction:column;gap:1px}
 .box .lead b{color:var(--ink);font-weight:600;font-size:var(--fs-sm)}
+.box .boxpay{margin-top:8px;font-size:var(--fs-xs);color:#7a5212;display:flex;flex-direction:column;line-height:1.35}
+.box .boxpay b{font-family:"Space Grotesk",sans-serif;font-size:var(--fs-sm)}
+.box .boxpay span{color:var(--muted)}
 .box .foot{display:flex;align-items:center;justify-content:space-between;margin-top:auto;padding-top:11px;border-top:1px solid var(--line)}
 .box .cnt{font-family:"Space Grotesk",sans-serif;font-weight:600;font-size:var(--fs-md)}
 .box .cnt span{color:var(--muted);font-weight:400;font-size:var(--fs-xs)}
@@ -198,6 +202,9 @@ body.chart-expanded .tree{align-items:flex-start}
 .movedtag{color:var(--gold-2);border:1px solid var(--gold)}
 .ec-meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:11px}
 .chip{font-size:var(--fs-xs);color:var(--green-2);background:var(--green-soft);border:1px solid #d6e2da;padding:3px 9px;border-radius:6px}
+.ec-pay{display:flex;gap:8px;margin-top:10px;padding-top:9px;border-top:1px dashed var(--line)}
+.ec-pay .ecp{display:flex;flex-direction:column;gap:1px;font-size:var(--fs-sm);font-weight:600;color:var(--ink);font-family:"Space Grotesk",sans-serif;flex:1;min-width:0}
+.ec-pay .ecp label{font-size:9.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);font-family:"Inter",sans-serif}
 .ec-actions{margin-top:11px;display:flex;gap:8px;align-items:center;border-top:1px dashed var(--line);padding-top:10px}
 .ec-actions select{font:inherit;font-size:var(--fs-sm);padding:6px 8px;border:1px solid var(--line);border-radius:7px;background:var(--paper);flex:1;color:var(--ink);min-width:0}
 .iconbtn{font:inherit;font-size:var(--fs-sm);border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:7px;padding:6px 11px;cursor:pointer}

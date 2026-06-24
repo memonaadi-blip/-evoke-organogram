@@ -41,6 +41,16 @@
   function hue(n){let h=0;for(let i=0;i<n.length;i++)h=(h*31+n.charCodeAt(i))%360;return h;}
   function color(n,l=46,s=52){return`hsl(${hue(String(n))} ${s}% ${l}%)`;}
   function initials(n){const p=String(n).trim().split(/\s+/);return(((p[0]||"")[0]||"")+((p[1]||"")[0]||"")).toUpperCase();}
+  /* ---- money / payroll helpers ---- */
+  const numv = (v)=>{ const n=Number(v); return isFinite(n)?n:0; };
+  const money = (n)=> "Rs " + Math.round(numv(n)).toLocaleString();
+  function moneyShort(n){ n=Math.round(numv(n)); const a=Math.abs(n);
+    if(a>=1e7) return "Rs "+(n/1e6).toFixed(1)+"M"; if(a>=1e5) return "Rs "+(n/1e3).toFixed(0)+"K";
+    return "Rs "+n.toLocaleString(); }
+  function fmtDate(s){ if(!s) return "—"; const d=new Date(s); return isNaN(d)? String(s)
+    : d.toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"}); }
+  const ROLLUPS = CFG.rollups || [];
+  function sumPay(list){ const o={g:0,n:0}; for(const e of list){ o.g+=numv(e.gross); o.n+=numv(e.net); } return o; }
 
   /* ---- position ranking (lower = more senior) ----
      The Lead of any group is the person with the most senior POSITION.
@@ -219,24 +229,26 @@
 
   /* ---- node markup ---- */
   function apexNode(){
-    const t=topPerson()||{};
     const topField=hierarchy[0];
     const units = topField? groupsAt(topField,EMP).length : 0;
+    const s=sumPay(EMP);
     return `<div class="node apex">
-      <div class="role-eyebrow">${esc(val(t,"position"))}</div>
-      <div class="nm">${esc(val(t,"name"))}</div>
-      <div class="sub">${esc(val(t,"department"))} · ${esc(val(t,"company"))}</div>
+      <div class="role-eyebrow">${esc(CFG.orgName||"Organisation")}</div>
+      <div class="nm">CHAIRMAN</div>
       <div class="hc">▦ ${EMP.length.toLocaleString()} employees${topField?` · ${units} ${esc(fieldLabel(topField).toLowerCase())}s`:""}</div>
+      ${ROLLUPS.length?`<div class="hc money">Σ ${moneyShort(s.n)} payment · ${moneyShort(s.g)} gross</div>`:""}
     </div>`;
   }
   /* a single ancestor (or current) node in the vertical lineage spine */
   function lineageNode(i){
     const p=path[i], isCurrent=(i===path.length-1);
-    const cnt=EMP.filter(e=>path.slice(0,i+1).every(q=>val(e,q.field)===q.value)).length;
+    const sub=EMP.filter(e=>path.slice(0,i+1).every(q=>val(e,q.field)===q.value));
+    const s=sumPay(sub);
     return `<div class="node lineage${isCurrent?" current":""}" data-nav="${i}">
       <div class="role-eyebrow">${esc(fieldLabel(p.field))}</div>
       <div class="nm">${esc(p.value)}</div>
-      <div class="hc">▦ ${cnt.toLocaleString()} people</div>
+      <div class="hc">▦ ${sub.length.toLocaleString()} people</div>
+      ${ROLLUPS.length?`<div class="hc money">Σ ${moneyShort(s.n)} payment · ${moneyShort(s.g)} gross</div>`:""}
     </div>`;
   }
   /* the whole chain from the top down to (and including) the current node,
@@ -253,11 +265,12 @@
       const i=+n.dataset.nav; path=path.slice(0,i+1); render(); $(".stage").scrollTop=0;
     });
   }
-  function groupBox(field,name,count,lead,isLeafParent){
+  function groupBox(field,name,count,lead,isLeafParent,tot){
     return `<div class="box" data-name="${esc(name)}">
       <div class="swatch" style="background:${color(name)}"></div>
       <div class="bname">${esc(name)}</div>
       ${lead?`<div class="lead">${isLeafParent?"Senior":"Lead"}: <b>${esc(lead.name)}</b><span>${esc(lead.position)}</span></div>`:""}
+      ${tot&&ROLLUPS.length?`<div class="boxpay"><b>${moneyShort(tot.n)}</b><span>payment · ${moneyShort(tot.g)} gross</span></div>`:""}
       <div class="foot"><div class="cnt">${count} <span>${count===1?"person":"people"}</span></div><div class="go">open ›</div></div>
     </div>`;
   }
@@ -291,6 +304,11 @@
         </div>
       </div>
       <div class="ec-meta">${chips}</div>
+      ${ROLLUPS.length?`<div class="ec-pay">
+        <span class="ecp"><label>Joined</label>${esc(fmtDate(e.doj))}</span>
+        <span class="ecp"><label>Gross</label>${e.gross?esc(money(e.gross)):"—"}</span>
+        <span class="ecp"><label>Payment</label>${e.net?esc(money(e.net)):"—"}</span>
+      </div>`:""}
       ${actions}
     </div>`;
   }
@@ -349,7 +367,7 @@
     const cells=groupsAt(field,list).map(([name,ct])=>{
       const np=p.concat(plan.skipped,[{field,value:name}]);
       const sub=list.filter(e=>val(e,field)===name);
-      const box=groupBox(field,name,ct,leadOf(sub),isLeafParent);
+      const box=groupBox(field,name,ct,leadOf(sub),isLeafParent,sumPay(sub));
       const below=planLevel(np.length,sub).field ? `<div class="down"></div>`+chartBranch(np,sub) : "";
       return `<div class="child"><div class="boxwrap" data-navpath="${esc(JSON.stringify(np))}">${box}</div>${below}</div>`;
     });
@@ -440,7 +458,7 @@
       const groups = groupsAt(f, list);
       const boxes = groups.map(([name,ct])=>{
         const sub = list.filter(e=>val(e,f)===name);
-        return groupBox(f,name,ct,leadOf(sub),isLeafParent);
+        return groupBox(f,name,ct,leadOf(sub),isLeafParent,sumPay(sub));
       });
       tree.innerHTML = lineageSpine()+`<div class="down"></div>`+childrenRow(boxes);
       wireSpine(); wireBoxes(f, plan.skipped); adjustBar();

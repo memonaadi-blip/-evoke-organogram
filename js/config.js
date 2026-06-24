@@ -24,8 +24,14 @@ window.ORG_CONFIG = {
     { key: "department",    label: "Department",    group: true  },
     { key: "section",       label: "Section",       group: true  },
     { key: "business_area", label: "Business Area", group: true  },
-    { key: "company",       label: "Company",       group: true  }
+    { key: "company",       label: "Company",       group: true  },
+    { key: "doj",           label: "Date of Joining", group: false },
+    { key: "gross",         label: "Gross Salary",    group: false, money: true },
+    { key: "net",           label: "Payment Total",   group: false, money: true }
   ],
+
+  /* fields summed (cumulative balance) at each level of the chart */
+  rollups: ["gross", "net"],
 
   /* chips shown on each employee card */
   cardChips: ["business_area", "company"],
