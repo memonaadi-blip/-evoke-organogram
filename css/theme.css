@@ -65,9 +65,12 @@ body{background:transparent;color:var(--ink)}
   -webkit-mask-image:linear-gradient(to top,#000 86%,transparent 100%);
   mask-image:linear-gradient(to top,#000 86%,transparent 100%);
 }
-.bg-skyline .sky-photo{opacity:.40;filter:brightness(.8) saturate(1.05) contrast(1.04)}
-.bg-skyline .star-head{fill:#2bffe6}            /* neon ball */
-.bg-skyline .star-tail{fill:url(#tail-grad)}    /* shooting-star tail */
+.bg-skyline .sky-photo{opacity:.28;filter:brightness(.78) saturate(1.05) contrast(1.04)}
+/* a light streak running along the rooflines (minimal single neon colour) */
+.bg-skyline .streak{fill:none;stroke:#2bffe6;stroke-linecap:round;stroke-linejoin:round;filter:url(#sky-glow)}
+.bg-skyline .streak-tail{stroke-width:5;opacity:.16;stroke-dasharray:150 1000}
+.bg-skyline .streak-mid{stroke-width:3.4;opacity:.42;stroke-dasharray:84 1000}
+.bg-skyline .streak-core{stroke-width:2.4;opacity:.98;stroke-dasharray:34 1000}
 @media(prefers-reduced-motion:reduce){.aurora,.bg-skyline .sky-light animateMotion{animation:none!important}}
 
 /* ---------- header (glassy translucent) ---------- */
