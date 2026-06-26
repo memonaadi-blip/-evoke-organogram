@@ -9,9 +9,30 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;450;500;600&display=swap" rel="stylesheet">
 <!-- Bump ?v= when you change styles/code so browsers reload instead of using a cached copy. -->
-<link rel="stylesheet" href="css/styles.css?v=2026-06-26b">
+<link rel="stylesheet" href="css/styles.css?v=2026-06-26c">
+<link rel="stylesheet" href="css/theme.css?v=2026-06-26c">
 </head>
 <body>
+
+<!-- ===== themed background layers (mirrors the Income Fix look) ===== -->
+<canvas id="bg-canvas" aria-hidden="true"></canvas>
+<div class="bg-grid" aria-hidden="true"></div>
+<div class="aurora aurora-1" aria-hidden="true"></div>
+<div class="aurora aurora-2" aria-hidden="true"></div>
+<div class="aurora aurora-3" aria-hidden="true"></div>
+<div class="bg-skyline" aria-hidden="true"></div>
+<div class="bg-orbit" aria-hidden="true">
+  <div class="orbit-ring"></div>
+  <div class="orbit-ring r2"></div>
+  <div class="orbit-spin">
+    <div class="orbit-marker">
+      <svg class="neon-building" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round">
+        <path d="M6 30V13l5-3v20M11 30V6l8-4v28M19 30V11l7 4v15"/>
+        <path d="M14 9h2M14 13h2M14 17h2M14 21h2M22 18h2M22 22h2" stroke-width="1.2"/>
+      </svg>
+    </div>
+  </div>
+</div>
 
 <header>
   <div class="brand">
@@ -174,7 +195,8 @@
 
 <!-- data first, then config, then app -->
 <script src="data/employees.js"></script>
-<script src="js/config.js?v=2026-06-26b"></script>
-<script src="js/app.js?v=2026-06-26b"></script>
+<script src="js/config.js?v=2026-06-26c"></script>
+<script src="js/app.js?v=2026-06-26c"></script>
+<script src="js/theme.js?v=2026-06-26c"></script>
 </body>
 </html>

@@ -1,0 +1,218 @@
+/* =====================================================================
+   Evoke Organogram — "Income Fix" dark theme overlay
+   Loaded AFTER styles.css so it overrides the light palette. Concept &
+   colours mirror the Income Fix site: deep navy, teal→sky→indigo gradient,
+   glassy cards, animated particle/aurora background, Imarat skyline, and a
+   neon building that travels an orbit (the "moving ball").
+   Delete this <link> (and bg layers) to revert to the light theme.
+   ===================================================================== */
+
+/* ---------- palette remap (overrides :root in styles.css) ---------- */
+:root{
+  --ink:#eef2fa;
+  --paper:#05070d;
+  --card:rgba(255,255,255,0.05);
+  --line:rgba(255,255,255,0.10);
+  --line-dk:rgba(255,255,255,0.08);
+  --muted:#a8b3c9;
+  --muted-dk:#828fa8;
+
+  /* accent (was gold) -> teal / sky */
+  --gold:#5eead4;
+  --gold-2:#7fe7d6;
+  --gold-soft:rgba(94,234,212,0.14);
+
+  /* "green" (header/hover) -> navy + teal-soft */
+  --green:#0c1626;
+  --green-2:#070b14;
+  --green-soft:rgba(94,234,212,0.10);
+
+  --panel:#080c16;            /* sidebar */
+  --conn:rgba(125,211,252,0.22);
+  --good:#34d399; --danger:#fb7185;
+
+  --teal:#5eead4; --sky:#38bdf8; --indigo:#818cf8;
+  --grad:linear-gradient(120deg,#5eead4,#38bdf8 45%,#818cf8);
+
+  --shadow:0 1px 2px rgba(0,0,0,.35),0 12px 30px rgba(0,0,0,.45);
+  --shadow-lg:0 10px 28px rgba(0,0,0,.5),0 26px 64px rgba(0,0,0,.6);
+}
+
+/* page is transparent so the fixed background layers show through */
+html{background:#05070d}
+body{background:transparent;color:var(--ink)}
+
+/* ---------- fixed background layers ---------- */
+#bg-canvas{position:fixed;inset:0;z-index:-4;width:100%;height:100%;pointer-events:none}
+.bg-grid{
+  position:fixed;inset:0;z-index:-3;pointer-events:none;
+  background-image:linear-gradient(rgba(255,255,255,0.025) 1px,transparent 1px),
+                   linear-gradient(90deg,rgba(255,255,255,0.025) 1px,transparent 1px);
+  background-size:60px 60px;
+  -webkit-mask-image:radial-gradient(circle at 50% 32%,#000 0%,transparent 78%);
+  mask-image:radial-gradient(circle at 50% 32%,#000 0%,transparent 78%);
+}
+.aurora{position:fixed;border-radius:50%;filter:blur(95px);opacity:.30;z-index:-4;pointer-events:none;will-change:transform}
+.aurora-1{width:520px;height:520px;background:#0ea5e9;top:-130px;left:-110px;animation:flo1 17s ease-in-out infinite}
+.aurora-2{width:480px;height:480px;background:#6366f1;top:34%;right:-150px;animation:flo2 21s ease-in-out infinite}
+.aurora-3{width:440px;height:440px;background:#14b8a6;bottom:-140px;left:32%;animation:flo1 24s ease-in-out infinite reverse}
+@keyframes flo1{0%,100%{transform:translate(0,0)}50%{transform:translate(60px,40px)}}
+@keyframes flo2{0%,100%{transform:translate(0,0)}50%{transform:translate(-50px,60px)}}
+
+/* Imarat skyline at the bottom, faded into the navy */
+.bg-skyline{
+  position:fixed;left:0;right:0;bottom:0;height:34vh;z-index:-3;pointer-events:none;
+  background:url("../assets/skyline.png") center bottom / cover no-repeat;
+  opacity:.42;filter:brightness(.8) saturate(1.05) contrast(1.05);
+  -webkit-mask-image:linear-gradient(to top,#000 28%,transparent 96%);
+  mask-image:linear-gradient(to top,#000 28%,transparent 96%);
+}
+.bg-skyline::after{   /* teal/navy wash so it reads as a backdrop */
+  content:"";position:absolute;inset:0;
+  background:linear-gradient(to top,rgba(5,7,13,.55),rgba(5,7,13,.05) 60%);
+  mix-blend-mode:normal;
+}
+
+/* ---------- moving neon building (orbit, like the clip's ball) ---------- */
+.bg-orbit{position:fixed;top:40%;left:50%;transform:translate(-50%,-50%);
+  width:min(64vw,640px);height:min(64vw,640px);z-index:-2;pointer-events:none}
+.orbit-ring{position:absolute;inset:0;border:1px dashed rgba(125,211,252,0.16);border-radius:50%}
+.orbit-ring.r2{inset:14%;border-color:rgba(129,140,248,0.10)}
+.orbit-spin{position:absolute;inset:0;animation:orbitspin 28s linear infinite;will-change:transform}
+.orbit-marker{position:absolute;top:-20px;left:50%;width:40px;height:40px;margin-left:-20px}
+.orbit-marker .neon-building{display:block;width:100%;height:100%;color:var(--teal);
+  animation:orbitspin 28s linear infinite reverse;
+  filter:drop-shadow(0 0 5px rgba(94,234,212,.9)) drop-shadow(0 0 14px rgba(56,189,248,.6))}
+@keyframes orbitspin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.orbit-spin,.orbit-marker .neon-building,.aurora{animation:none!important}}
+
+/* ---------- header (glassy translucent) ---------- */
+header{background:rgba(7,11,20,0.72)!important;backdrop-filter:blur(14px);
+  -webkit-backdrop-filter:blur(14px);border-bottom:1px solid var(--line);box-shadow:0 1px 0 rgba(255,255,255,.03)}
+.btn.gold{background:var(--grad);border:none;color:#05070d;font-weight:700}
+.btn.gold:hover{filter:brightness(1.06)}
+.viewseg button.active{background:var(--grad);color:#05070d}
+.ro-badge{color:var(--teal);border-color:rgba(94,234,212,.4);background:rgba(94,234,212,.12)}
+.menu-pop{background:#0c1322;border:1px solid var(--line)}
+.menu-pop button{color:var(--ink)}
+.menu-pop button:hover{background:rgba(94,234,212,.10)}
+
+/* ---------- banner ---------- */
+.banner{background:rgba(56,189,248,.08);border-bottom:1px solid var(--line);color:#cfe0f5}
+.banner b{color:#fff}
+.banner button{background:rgba(255,255,255,.06);border:1px solid var(--line);color:#cfe0f5}
+.banner button.solid{background:var(--grad);border:none;color:#05070d}
+
+/* ---------- sidebar ---------- */
+.sidebar{background:rgba(8,12,22,0.86);backdrop-filter:blur(10px);border-right:1px solid var(--line)}
+.unit.active{background:rgba(94,234,212,.14);border-color:rgba(94,234,212,.4)}
+.unit .gr{color:var(--teal)}
+@keyframes uflash{0%{background:rgba(94,234,212,.4)}100%{background:rgba(94,234,212,.14)}}
+
+/* ---------- connectors ---------- */
+.down,.children::before,.child::before,.children.chart-row::before,.children.chart-row>.child::before{background:var(--conn)}
+
+/* ---------- nodes / apex ---------- */
+.node{background:linear-gradient(160deg,rgba(255,255,255,0.07),rgba(255,255,255,0.025));
+  border:1px solid var(--line);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.node.apex{border:1.5px solid rgba(94,234,212,.55);
+  background:linear-gradient(160deg,rgba(94,234,212,0.10),rgba(56,189,248,0.04) 60%,rgba(255,255,255,0.02));
+  box-shadow:0 0 0 1px rgba(94,234,212,.08),0 24px 70px rgba(0,0,0,.55)}
+.node .role-eyebrow{color:var(--teal)}
+.node .nm{color:var(--ink)}
+.node .hc{color:var(--teal);background:rgba(94,234,212,.10);border:1px solid rgba(94,234,212,.20)}
+.node .hc.money{background:rgba(255,255,255,.04);border:1px solid var(--line)}
+.node.lineage.current{border:1.5px solid rgba(94,234,212,.5);
+  background:linear-gradient(160deg,rgba(94,234,212,0.10),rgba(255,255,255,0.02))}
+
+/* ---------- two salary colours (teal gross / amber payment) ---------- */
+.m-gross{color:#5eead4}
+.m-net{color:#fbbf24}
+.ec-sal .ecp b.m-gross,.bl-chart .pn-pay .m-gross{color:#5eead4}
+.ec-sal .ecp b.m-net,.bl-chart .pn-pay .m-net{color:#fbbf24}
+
+/* ---------- group boxes ---------- */
+.box{background:linear-gradient(160deg,rgba(255,255,255,0.07),rgba(255,255,255,0.025));border:1px solid var(--line)}
+.box .bname{color:var(--ink)}
+.box .blead-nm span{color:var(--teal)}
+.box .blead-nm b,.box .lead b{color:var(--ink)}
+.box .go{color:var(--teal)}
+.box-acts button{background:rgba(255,255,255,.06);border:1px solid var(--line);color:var(--muted)}
+.box-acts .bx-add:hover{background:rgba(94,234,212,.16);border-color:var(--teal);color:var(--teal)}
+.box-acts .bx-move:hover{background:rgba(94,234,212,.12);border-color:var(--teal);color:var(--teal)}
+.box-acts .bx-del:hover{background:rgba(251,113,133,.14);border-color:var(--danger);color:var(--danger)}
+@keyframes bflash{0%{background:rgba(94,234,212,.18);border-color:var(--teal)}100%{background:rgba(255,255,255,.04);border-color:var(--line)}}
+
+/* ---------- employee cards ---------- */
+.ecard{background:linear-gradient(160deg,rgba(255,255,255,0.07),rgba(255,255,255,0.025));border:1px solid var(--line)}
+.ecard.lead{border-color:rgba(94,234,212,.55);box-shadow:0 0 0 1px rgba(94,234,212,.18),var(--shadow)}
+.ec-id{color:var(--muted-dk)}
+.ec-name{color:var(--ink)}
+.leadtag{color:#05070d;background:var(--teal)}
+.chip{color:var(--teal);background:rgba(94,234,212,.10);border:1px solid rgba(94,234,212,.18)}
+.ec-join .ten{color:var(--teal)}
+.ec-actions .ic{background:rgba(255,255,255,.06);border:1px solid var(--line);color:var(--muted)}
+.ec-actions .ic:hover{background:rgba(94,234,212,.14);border-color:var(--teal);color:var(--teal)}
+.ec-actions .ic.lead-btn.on{background:rgba(94,234,212,.18);border-color:var(--teal);color:var(--teal)}
+@keyframes hl{0%,40%{box-shadow:0 0 0 3px var(--teal)}100%{box-shadow:var(--shadow)}}
+
+/* ---------- people header add button ---------- */
+.addhere{background:rgba(94,234,212,.12);border:1px solid rgba(94,234,212,.4);color:var(--teal)}
+.addhere:hover{background:rgba(94,234,212,.2)}
+
+/* ---------- search results ---------- */
+.results{background:#0c1322;border:1px solid var(--line)}
+.res:hover{background:rgba(94,234,212,.08)}
+.res .rn{color:var(--ink)}
+.res .rpath{color:var(--teal)}
+
+/* ---------- outline (Hierarchy) view ---------- */
+.tbtn{background:rgba(255,255,255,.05);border:1px solid var(--line);color:var(--ink)}
+.tbtn:hover{border-color:var(--teal)}
+.tbtn.primary{background:var(--grad);border:none;color:#05070d}
+.trow{background:linear-gradient(160deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02));border:1px solid var(--line)}
+.trow.open{background:rgba(94,234,212,.06);border-color:rgba(94,234,212,.3)}
+.tcaret{color:var(--teal)}
+.tname{color:var(--ink)}
+.tcount{background:rgba(255,255,255,.05);border:1px solid var(--line);color:var(--muted)}
+.tlead b{color:var(--ink)}
+.tperson{background:rgba(255,255,255,.04);border:1px solid var(--line)}
+.tperson.lead{border-color:rgba(94,234,212,.5)}
+.tpname{color:var(--ink)}
+.tpid{color:var(--muted-dk)}
+
+/* ---------- baseline person nodes ---------- */
+.bl-chart{background:rgba(5,7,13,.5);border:1px solid var(--line)}
+.bl-chart .pnode{background:linear-gradient(160deg,rgba(255,255,255,0.07),rgba(255,255,255,0.025));border:1px solid var(--line)}
+.bl-chart .pnode.lead{border-color:rgba(94,234,212,.5)}
+.bl-chart .pn-name{color:var(--ink)}
+.bl-chart .pn-id{color:var(--muted-dk)}
+.bl-chart .boxwrap.open>.box{border-color:rgba(94,234,212,.55);box-shadow:0 0 0 1px rgba(94,234,212,.18),var(--shadow)}
+
+/* ---------- modals ---------- */
+.modal{background:linear-gradient(165deg,#0d1322,#080b14);border:1px solid var(--line)}
+.modal h3{color:var(--ink)}
+.note{background:rgba(255,255,255,.04);border:1px solid var(--line);color:var(--muted)}
+.field input,.field select{background:rgba(255,255,255,.04);border:1px solid var(--line);color:var(--ink)}
+.field input:focus,.field select:focus{outline:none;border-color:var(--sky);box-shadow:0 0 0 3px rgba(56,189,248,.18)}
+.mbtn{border:1px solid var(--line);color:var(--ink)}
+.mbtn.primary{background:var(--grad);border:none;color:#05070d;font-weight:700}
+.mbtn.subtle{background:rgba(255,255,255,.05);color:var(--ink)}
+.mbtn.subtle:hover{background:rgba(255,255,255,.09)}
+.mbtn.danger{background:rgba(251,113,133,.12);border-color:rgba(251,113,133,.4);color:#fda4af}
+.lvl{background:rgba(255,255,255,.04);border:1px solid var(--line)}
+.lvl .ctrls button{background:rgba(255,255,255,.05);border:1px solid var(--line);color:var(--ink)}
+.lvl .ctrls button:hover{background:rgba(94,234,212,.12)}
+.addlvl select{background:rgba(255,255,255,.04);border:1px solid var(--line);color:var(--ink)}
+
+/* ---------- change-log / comparison tables ---------- */
+.lg-wrap{background:rgba(255,255,255,.02);border:1px solid var(--line)}
+table.lg th{background:rgba(94,234,212,.10);color:var(--teal)}
+table.lg td{border-top:1px solid var(--line)}
+table.lg tbody tr:hover{background:rgba(255,255,255,.03)}
+.lg-id,.lg-t{color:var(--muted-dk)}
+.cmp-total td{border-top:2px solid var(--teal);background:rgba(94,234,212,.10)}
+
+/* ---------- toast ---------- */
+#toast{background:#0c1322;border:1px solid var(--line);color:var(--ink)}
+#toast .dot{background:var(--teal)}
