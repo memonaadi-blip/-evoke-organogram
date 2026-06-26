@@ -804,7 +804,8 @@
   /* The original published organogram (As-is), rendered intact from RAW as a
      CHART (boxes + connectors). Collapsed = top level under the Chairman;
      "Expand all" blows the whole tree open. Always read-only reference. */
-  let blExpanded=false;
+  const blOpen=new Set();   // expanded node keys in the As-is chart (per-node)
+  const blKey=(p)=>p.map(x=>x.field+"="+x.value).join("|");
   /* a compact person node for the expanded baseline chart (the leaves) */
   function blPerson(e,isLead){
     return `<div class="pnode${isLead?" lead":""}">
@@ -817,23 +818,31 @@
       ${ROLLUPS.length?`<div class="pn-pay"><span class="m-gross">${e.gross?esc(money(e.gross)):"—"}</span> <span class="m-net">${e.net?esc(money(e.net)):"—"}</span></div>`:""}
     </div>`;
   }
-  /* baseline chart branch — like chartBranch but recurses all the way down to
-     the individual employees (shown as person nodes under their leaf group) */
-  function blBranch(p, list){
-    const plan=planLevel(p.length, list);
-    const field=plan.field;
+  /* every group node key in the baseline (for global Expand all) */
+  function allBlKeys(list){
+    const keys=[];
+    (function walk(p,sub){ const f=hierarchy[p.length]; if(!f) return;
+      for(const [name] of groupsAt(f,sub)){ const np=p.concat([{field:f,value:name}]);
+        keys.push(blKey(np)); walk(np, sub.filter(e=>val(e,f)===name)); } })([],list);
+    return keys;
+  }
+  /* one level of the baseline chart; a group's children are drawn only when its
+     own node is in blOpen — so you can open a single department on its own */
+  function blTree(p, list){
+    const field=hierarchy[p.length];
     if(!field){ // leaf -> people
       const arr=list.slice().sort(bySeniority), lead=arr[0];
       const cells=arr.map(e=>`<div class="child"><div class="boxwrap">${blPerson(e, arr.length>1&&e===lead)}</div></div>`);
       const cls=cells.length===1?"children single":"children chart-row";
       return `<div class="${cls}">${cells.join("")}</div>`;
     }
-    const isLeafParent=(plan.depth===hierarchy.length-1);
+    const isLeafParent=(p.length===hierarchy.length-1);
     const cells=groupsAt(field,list).map(([name,ct])=>{
-      const np=p.concat(plan.skipped,[{field,value:name}]);
-      const sub=list.filter(e=>val(e,field)===name);
+      const np=p.concat([{field,value:name}]), key=blKey(np);
+      const sub=list.filter(e=>val(e,field)===name), open=blOpen.has(key);
       const box=groupBox(field,name,ct,leadOf(sub),isLeafParent,sumPay(sub));
-      return `<div class="child"><div class="boxwrap">${box}</div><div class="down"></div>${blBranch(np,sub)}</div>`;
+      const below = open ? `<div class="down"></div>`+blTree(np,sub) : "";
+      return `<div class="child"><div class="boxwrap${open?" open":""}" data-blkey="${esc(key)}">${box}</div>${below}</div>`;
     });
     const cls=cells.length===1?"children single":"children chart-row";
     return `<div class="${cls}">${cells.join("")}</div>`;
@@ -843,33 +852,34 @@
     const topField=hierarchy[0];
     const units=topField?groupsAt(topField,blData).length:0;
     const s=sumPay(blData);
+    const allOpen = topField && blOpen.size>=allBlKeys(blData).length && blOpen.size>0;
     const apex=`<div class="node apex">
       <div class="role-eyebrow">${esc(CFG.orgName||"Organisation")}</div>
       <div class="nm">CHAIRMAN</div>
       <div class="hc"><span class="pic">👥</span> ${blData.length.toLocaleString()} employees${topField?` · ${units} ${esc(fieldLabel(topField).toLowerCase())}s`:""}</div>
       ${ROLLUPS.length?`<div class="hc money full"><span class="m-gross">Gross ${money(s.g)}</span> · <span class="m-net">Payment ${money(s.n)}</span></div>`:""}
     </div>`;
-    let body="";
-    if(!topField){ body=""; }
-    else if(blExpanded){ body=blBranch([],blData); }
-    else {
-      const isLeafParent=(hierarchy.length===1);
-      const cells=groupsAt(topField,blData).map(([name,ct])=>{
-        const sub=blData.filter(e=>val(e,topField)===name);
-        return `<div class="child">${groupBox(topField,name,ct,leadOf(sub),isLeafParent,sumPay(sub))}</div>`;
-      });
-      const cls=cells.length===1?"children single":"children chart-row";
-      body=`<div class="${cls}">${cells.join("")}</div>`;
-    }
+    const body = topField ? blTree([],blData) : "";
     return `<div class="bl-head">
         <span class="bl-title">Original organogram (As-is)</span>
-        <button class="tbtn" id="bl-toggle">${blExpanded?"⊟ Collapse":"⊞ Expand all"}</button>
+        <span class="bl-hint">Click a department to open it.</span>
+        <button class="tbtn" id="bl-toggle">${allOpen?"⊟ Collapse all":"⊞ Expand all"}</button>
       </div>
       <div class="bl-chart"><div class="chart-canvas">${apex}${body?`<div class="down"></div>`+body:""}</div></div>`;
   }
   function renderCompare(){
     $("#cmp-body").innerHTML=baselineChart();
-    const bt=$("#bl-toggle"); if(bt) bt.onclick=()=>{ blExpanded=!blExpanded; renderCompare(); };
+    const bt=$("#bl-toggle"); if(bt) bt.onclick=()=>{
+      const blData=reindex(RAW), all=allBlKeys(blData);
+      if(blOpen.size>=all.length && blOpen.size>0) blOpen.clear();   // collapse all
+      else all.forEach(k=>blOpen.add(k));                            // expand all
+      renderCompare();
+    };
+    // click a department/section box to open or close just that node
+    $$(".bl-chart .boxwrap[data-blkey]").forEach(w=>w.onclick=(ev)=>{
+      ev.stopPropagation();
+      const k=w.dataset.blkey; blOpen.has(k)?blOpen.delete(k):blOpen.add(k); renderCompare();
+    });
   }
   function exportCompare(){
     const {field,A,B,keys}=compareRows();

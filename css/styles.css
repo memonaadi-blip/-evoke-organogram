@@ -366,8 +366,11 @@ table.cmp th:nth-child(n+2){text-align:right}
 .bl-title{font-family:"Space Grotesk",sans-serif;font-weight:600;font-size:var(--fs-lg)}
 .bl-chart{max-height:54vh;overflow:auto;border:1px solid var(--line);border-radius:10px;background:var(--paper);padding:20px 16px}
 .bl-chart .chart-canvas{align-items:center}
-.bl-chart .box{cursor:default}
-.bl-chart .box:hover{transform:none}
+.bl-hint{font-size:var(--fs-xs);color:var(--muted);margin-right:auto}
+.bl-chart .box{cursor:pointer}
+.bl-chart .boxwrap.open > .box{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold-soft),var(--shadow)}
+.bl-chart .boxwrap.open > .box .go{opacity:1}
+.bl-chart .boxwrap.open > .box .go::after{content:" (open)"}
 /* leaf person nodes in the expanded baseline chart */
 .bl-chart .pnode{background:var(--card);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);
   padding:9px 10px;min-width:158px;max-width:178px;text-align:left}
