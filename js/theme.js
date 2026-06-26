@@ -15,7 +15,7 @@
   window.addEventListener("mousemove", function (e) { mouse.x = e.clientX * dpr; mouse.y = e.clientY * dpr; });
   window.addEventListener("mouseleave", function () { mouse.x = mouse.y = -9999; });
 
-  function count() { return Math.min(300, Math.floor((window.innerWidth * window.innerHeight) / 6500)); }
+  function count() { return Math.min(260, Math.floor((window.innerWidth * window.innerHeight) / 8200)); }
 
   function make() {
     stars = [];

@@ -65,8 +65,9 @@ body{background:transparent;color:var(--ink)}
   -webkit-mask-image:linear-gradient(to top,#000 86%,transparent 100%);
   mask-image:linear-gradient(to top,#000 86%,transparent 100%);
 }
-.bg-skyline .sky-photo{opacity:.82;filter:brightness(.92) saturate(1.12) contrast(1.06)}
-.bg-skyline .sky-light{fill:#2bffe6;filter:url(#sky-glow)}   /* neon teal light */
+.bg-skyline .sky-photo{opacity:.40;filter:brightness(.8) saturate(1.05) contrast(1.04)}
+.bg-skyline .sky-light{fill:#2bffe6}        /* neon teal head */
+.bg-skyline .sky-trail{fill:#5eead4}        /* glowing twilight trail */
 @media(prefers-reduced-motion:reduce){.aurora,.bg-skyline .sky-light animateMotion{animation:none!important}}
 
 /* ---------- header (glassy translucent) ---------- */
@@ -96,7 +97,7 @@ header{background:rgba(7,11,20,0.72)!important;backdrop-filter:blur(14px);
 .down,.children::before,.child::before,.children.chart-row::before,.children.chart-row>.child::before{background:var(--conn)}
 
 /* ---------- nodes / apex ---------- */
-.node{background:linear-gradient(160deg,rgba(255,255,255,0.07),rgba(255,255,255,0.025));
+.node{background:linear-gradient(160deg,rgba(255,255,255,0.07),rgba(255,255,255,0.02)),rgba(9,14,26,0.66);
   border:1px solid var(--line);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
 .node.apex{border:1.5px solid rgba(94,234,212,.55);
   background:linear-gradient(160deg,rgba(94,234,212,0.10),rgba(56,189,248,0.04) 60%,rgba(255,255,255,0.02));
@@ -115,7 +116,7 @@ header{background:rgba(7,11,20,0.72)!important;backdrop-filter:blur(14px);
 .ec-sal .ecp b.m-net,.bl-chart .pn-pay .m-net{color:#fbbf24}
 
 /* ---------- group boxes ---------- */
-.box{background:linear-gradient(160deg,rgba(255,255,255,0.07),rgba(255,255,255,0.025));border:1px solid var(--line)}
+.box{background:linear-gradient(160deg,rgba(255,255,255,0.07),rgba(255,255,255,0.02)),rgba(9,14,26,0.7);border:1px solid var(--line)}
 .box .bname{color:var(--ink)}
 .box .blead-nm span{color:var(--teal)}
 .box .blead-nm b,.box .lead b{color:var(--ink)}
@@ -127,7 +128,7 @@ header{background:rgba(7,11,20,0.72)!important;backdrop-filter:blur(14px);
 @keyframes bflash{0%{background:rgba(94,234,212,.18);border-color:var(--teal)}100%{background:rgba(255,255,255,.04);border-color:var(--line)}}
 
 /* ---------- employee cards ---------- */
-.ecard{background:linear-gradient(160deg,rgba(255,255,255,0.07),rgba(255,255,255,0.025));border:1px solid var(--line)}
+.ecard{background:linear-gradient(160deg,rgba(255,255,255,0.07),rgba(255,255,255,0.02)),rgba(9,14,26,0.7);border:1px solid var(--line)}
 .ecard.lead{border-color:rgba(94,234,212,.55);box-shadow:0 0 0 1px rgba(94,234,212,.18),var(--shadow)}
 .ec-id{color:var(--muted-dk)}
 .ec-name{color:var(--ink)}
@@ -166,7 +167,7 @@ header{background:rgba(7,11,20,0.72)!important;backdrop-filter:blur(14px);
 
 /* ---------- baseline person nodes ---------- */
 .bl-chart{background:rgba(5,7,13,.5);border:1px solid var(--line)}
-.bl-chart .pnode{background:linear-gradient(160deg,rgba(255,255,255,0.07),rgba(255,255,255,0.025));border:1px solid var(--line)}
+.bl-chart .pnode{background:linear-gradient(160deg,rgba(255,255,255,0.07),rgba(255,255,255,0.02)),rgba(9,14,26,0.7);border:1px solid var(--line)}
 .bl-chart .pnode.lead{border-color:rgba(94,234,212,.5)}
 .bl-chart .pn-name{color:var(--ink)}
 .bl-chart .pn-id{color:var(--muted-dk)}
