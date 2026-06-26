@@ -9,30 +9,42 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;450;500;600&display=swap" rel="stylesheet">
 <!-- Bump ?v= when you change styles/code so browsers reload instead of using a cached copy. -->
-<link rel="stylesheet" href="css/styles.css?v=2026-06-26c">
-<link rel="stylesheet" href="css/theme.css?v=2026-06-26c">
+<link rel="stylesheet" href="css/styles.css?v=2026-06-26e">
+<link rel="stylesheet" href="css/theme.css?v=2026-06-26e">
 </head>
 <body>
 
-<!-- ===== themed background layers (mirrors the Income Fix look) ===== -->
-<canvas id="bg-canvas" aria-hidden="true"></canvas>
+<!-- ===== themed background layers ===== -->
+<canvas id="bg-canvas" aria-hidden="true"></canvas>      <!-- starfield -->
 <div class="bg-grid" aria-hidden="true"></div>
 <div class="aurora aurora-1" aria-hidden="true"></div>
 <div class="aurora aurora-2" aria-hidden="true"></div>
 <div class="aurora aurora-3" aria-hidden="true"></div>
-<div class="bg-skyline" aria-hidden="true"></div>
-<div class="bg-orbit" aria-hidden="true">
-  <div class="orbit-ring"></div>
-  <div class="orbit-ring r2"></div>
-  <div class="orbit-spin">
-    <div class="orbit-marker">
-      <svg class="neon-building" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round">
-        <path d="M6 30V13l5-3v20M11 30V6l8-4v28M19 30V11l7 4v15"/>
-        <path d="M14 9h2M14 13h2M14 17h2M14 21h2M22 18h2M22 22h2" stroke-width="1.2"/>
-      </svg>
-    </div>
-  </div>
-</div>
+
+<!-- Imarat skyline + a neon light that runs along the building edges -->
+<svg class="bg-skyline" viewBox="0 0 1853 423" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+  <defs>
+    <filter id="sky-glow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="7" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <linearGradient id="rl-grad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#5eead4"/><stop offset="0.5" stop-color="#38bdf8"/><stop offset="1" stop-color="#818cf8"/>
+    </linearGradient>
+  </defs>
+  <!-- the actual Imarat buildings, faint -->
+  <image class="sky-photo" href="assets/skyline.png" x="0" y="0" width="1853" height="423" preserveAspectRatio="xMidYMax slice"/>
+  <!-- dark silhouette fill so the skyline reads as solid against the stars -->
+  <path class="sky-fill" d="M0,362 L70,362 L70,150 L150,150 L150,70 L195,70 L195,150 L240,150 L240,100 L300,100 L300,140 L345,140 L345,80 L370,80 L370,105 L520,105 L520,80 L548,80 L548,150 L640,150 L640,120 L700,120 L700,60 L770,60 L770,95 L840,95 L840,115 L960,115 L960,85 L1080,85 L1080,125 L1175,125 L1175,72 L1285,72 L1285,115 L1480,115 L1480,95 L1610,95 L1610,66 L1685,66 L1685,42 L1755,42 L1755,78 L1830,78 L1830,362 L1853,362 L1853,423 L0,423 Z"/>
+  <!-- glowing neon outline of the rooflines -->
+  <path id="roofline" class="sky-edge" fill="none" d="M0,362 L70,362 L70,150 L150,150 L150,70 L195,70 L195,150 L240,150 L240,100 L300,100 L300,140 L345,140 L345,80 L370,80 L370,105 L520,105 L520,80 L548,80 L548,150 L640,150 L640,120 L700,120 L700,60 L770,60 L770,95 L840,95 L840,115 L960,115 L960,85 L1080,85 L1080,125 L1175,125 L1175,72 L1285,72 L1285,115 L1480,115 L1480,95 L1610,95 L1610,66 L1685,66 L1685,42 L1755,42 L1755,78 L1830,78 L1830,362 L1853,362"/>
+  <!-- the light that travels along the edges -->
+  <circle class="sky-light" r="6" filter="url(#sky-glow)">
+    <animateMotion dur="18s" repeatCount="indefinite" keyPoints="0;1;0" keyTimes="0;0.5;1" calcMode="linear">
+      <mpath href="#roofline"/>
+    </animateMotion>
+  </circle>
+</svg>
 
 <header>
   <div class="brand">
@@ -195,8 +207,8 @@
 
 <!-- data first, then config, then app -->
 <script src="data/employees.js"></script>
-<script src="js/config.js?v=2026-06-26c"></script>
-<script src="js/app.js?v=2026-06-26c"></script>
-<script src="js/theme.js?v=2026-06-26c"></script>
+<script src="js/config.js?v=2026-06-26e"></script>
+<script src="js/app.js?v=2026-06-26e"></script>
+<script src="js/theme.js?v=2026-06-26e"></script>
 </body>
 </html>

@@ -1,75 +1,67 @@
 /* =====================================================================
-   Evoke Organogram — theme background: teal particle network on #bg-canvas
-   (mirrors the Income Fix site). Pure canvas, no deps. Respects
+   Evoke Organogram — theme background: a twinkling STARFIELD on #bg-canvas.
+   (Replaces the old particle network.) Pure canvas, no deps. Respects
    prefers-reduced-motion. Safe to remove with the theme.
    ===================================================================== */
 (function () {
-  if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
   var canvas = document.getElementById("bg-canvas");
   if (!canvas) return;
   var ctx = canvas.getContext("2d");
   var dpr = window.devicePixelRatio || 1;
-  var w, h, pts, mouse = { x: -9999, y: -9999 };
-  var COUNT = function () { return Math.min(80, Math.floor(window.innerWidth / 18)); };
-  var LINK;
+  var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var w, h, stars;
 
+  function count() { return Math.min(300, Math.floor((window.innerWidth * window.innerHeight) / 6500)); }
+
+  function make() {
+    stars = [];
+    var n = count();
+    for (var i = 0; i < n; i++) {
+      var big = Math.random() < 0.12;
+      stars.push({
+        x: Math.random() * w,
+        y: Math.random() * h,
+        r: (big ? Math.random() * 1.3 + 1.1 : Math.random() * 0.9 + 0.4) * dpr,
+        base: Math.random() * 0.5 + 0.35,        // base brightness
+        amp: Math.random() * 0.45 + 0.2,         // twinkle amplitude
+        sp: Math.random() * 1.6 + 0.4,           // twinkle speed
+        ph: Math.random() * Math.PI * 2,         // phase
+        teal: Math.random() < 0.22,              // a few teal-tinted stars
+        drift: (Math.random() * 0.12 + 0.02) * dpr
+      });
+    }
+  }
   function resize() {
     w = canvas.width = window.innerWidth * dpr;
     h = canvas.height = window.innerHeight * dpr;
     canvas.style.width = window.innerWidth + "px";
     canvas.style.height = window.innerHeight + "px";
-    LINK = 130 * dpr;
-    init();
+    make();
   }
-  function init() {
-    pts = [];
-    var n = COUNT();
-    for (var i = 0; i < n; i++) {
-      pts.push({
-        x: Math.random() * w, y: Math.random() * h,
-        vx: (Math.random() - 0.5) * 0.25 * dpr,
-        vy: (Math.random() - 0.5) * 0.25 * dpr,
-        r: (Math.random() * 1.6 + 0.6) * dpr
-      });
-    }
-  }
-  window.addEventListener("mousemove", function (e) { mouse.x = e.clientX * dpr; mouse.y = e.clientY * dpr; });
 
-  function draw() {
+  function render(t) {
     ctx.clearRect(0, 0, w, h);
-    for (var i = 0; i < pts.length; i++) {
-      var p = pts[i];
-      p.x += p.vx; p.y += p.vy;
-      if (p.x < 0 || p.x > w) p.vx *= -1;
-      if (p.y < 0 || p.y > h) p.vy *= -1;
+    for (var i = 0; i < stars.length; i++) {
+      var s = stars[i];
+      var a = reduce ? s.base : s.base + s.amp * Math.sin(t * 0.001 * s.sp + s.ph);
+      if (a < 0.04) a = 0.04; if (a > 1) a = 1;
       ctx.beginPath();
-      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-      ctx.fillStyle = "rgba(94,234,212,0.5)";
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ctx.fillStyle = s.teal ? "rgba(94,234,212," + a + ")" : "rgba(214,232,255," + a + ")";
       ctx.fill();
-      for (var j = i + 1; j < pts.length; j++) {
-        var q = pts[j];
-        var dx = p.x - q.x, dy = p.y - q.y;
-        var d = Math.hypot(dx, dy);
-        if (d < LINK) {
-          ctx.beginPath();
-          ctx.moveTo(p.x, p.y); ctx.lineTo(q.x, q.y);
-          ctx.strokeStyle = "rgba(56,189,248," + (0.16 * (1 - d / LINK)) + ")";
-          ctx.lineWidth = dpr;
-          ctx.stroke();
-        }
-      }
-      var mdx = p.x - mouse.x, mdy = p.y - mouse.y;
-      var md = Math.hypot(mdx, mdy);
-      if (md < LINK * 1.4) {
+      // soft halo on the brighter stars
+      if (s.r > 1.4 * dpr) {
         ctx.beginPath();
-        ctx.moveTo(p.x, p.y); ctx.lineTo(mouse.x, mouse.y);
-        ctx.strokeStyle = "rgba(129,140,248," + (0.22 * (1 - md / (LINK * 1.4))) + ")";
-        ctx.lineWidth = dpr;
-        ctx.stroke();
+        ctx.arc(s.x, s.y, s.r * 2.4, 0, Math.PI * 2);
+        ctx.fillStyle = (s.teal ? "rgba(94,234,212," : "rgba(180,214,255,") + (a * 0.12) + ")";
+        ctx.fill();
       }
+      if (!reduce) { s.y += s.drift; if (s.y > h) { s.y = 0; s.x = Math.random() * w; } }
     }
-    requestAnimationFrame(draw);
+    requestAnimationFrame(render);
   }
+
   window.addEventListener("resize", resize);
-  resize(); draw();
+  resize();
+  if (reduce) render(0); else requestAnimationFrame(render);
 })();
