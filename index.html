@@ -153,6 +153,22 @@
   </div>
 </div>
 
+<!-- Move / reassign a single person -->
+<div class="overlay" id="mv-overlay">
+  <div class="modal">
+    <div class="modal-head"><h3 id="mv-title">Move person</h3><button class="modal-x" data-close>×</button></div>
+    <div class="modal-body">
+      <p class="note" id="mv-msg" style="margin-top:0"></p>
+      <div class="field"><label>Destination</label><select id="mv-target"></select></div>
+    </div>
+    <div class="modal-foot">
+      <span class="sp"></span>
+      <button class="mbtn subtle" id="mv-dept">Just the department</button>
+      <button class="mbtn primary" id="mv-full">Whole hierarchy</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast"><span class="dot"></span><span id="toast-msg"></span></div>
 
 <!-- data first, then config, then app -->

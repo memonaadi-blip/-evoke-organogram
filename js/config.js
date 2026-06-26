@@ -33,8 +33,8 @@ window.ORG_CONFIG = {
   /* fields summed (cumulative balance) at each level of the chart */
   rollups: ["gross", "net"],
 
-  /* chips shown on each employee card */
-  cardChips: ["business_area", "company"],
+  /* chips shown on each employee card (company first, then location) */
+  cardChips: ["company", "business_area"],
 
   /* --- editing ---
      allowEditing : master switch for the edit toolset

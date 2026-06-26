@@ -43,12 +43,22 @@
   function initials(n){const p=String(n).trim().split(/\s+/);return(((p[0]||"")[0]||"")+((p[1]||"")[0]||"")).toUpperCase();}
   /* ---- money / payroll helpers ---- */
   const numv = (v)=>{ const n=Number(v); return isFinite(n)?n:0; };
-  const money = (n)=> "Rs " + Math.round(numv(n)).toLocaleString();
+  const money = (n)=> "Rs " + Math.round(numv(n)).toLocaleString();   // employee level: full rupees
   function moneyShort(n){ n=Math.round(numv(n)); const a=Math.abs(n);
     if(a>=1e6) return "Rs "+(n/1e6).toFixed(1)+"M"; if(a>=1e3) return "Rs "+(n/1e3).toFixed(0)+"K";
     return "Rs "+n.toLocaleString(); }
+  /* group / department / apex level: always in millions */
+  function moneyM(n){ const m=numv(n)/1e6; return "Rs "+m.toFixed(Math.abs(m)>=10?1:2)+"M"; }
+  /* two colour-coded salary figures (gross then payment) for any group node */
+  function payDuo(g,n){ return `<span class="m-gross" title="Gross salary (total)">${moneyM(g)}</span>`+
+    `<span class="m-net" title="Payment (total)">${moneyM(n)}</span>`; }
   function fmtDate(s){ if(!s) return "—"; const d=new Date(s); return isNaN(d)? String(s)
     : d.toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"}); }
+  /* length of service from date of joining to today, e.g. "5y 3m" */
+  function tenure(s){ if(!s) return ""; const d=new Date(s); if(isNaN(d)) return "";
+    const now=new Date(); let m=(now.getFullYear()-d.getFullYear())*12+(now.getMonth()-d.getMonth());
+    if(now.getDate()<d.getDate()) m--; if(m<0) m=0;
+    const y=Math.floor(m/12), mm=m%12; return (y?y+"y ":"")+(mm||!y?mm+"m":"").trim(); }
   const ROLLUPS = CFG.rollups || [];
   function sumPay(list){ const o={g:0,n:0}; for(const e of list){ o.g+=numv(e.gross); o.n+=numv(e.net); } return o; }
 
@@ -97,6 +107,12 @@
         const d = localStorage.getItem(LS_KEY);
         if (d){ const arr = JSON.parse(d); if(Array.isArray(arr)&&arr.length){ EMP = reindex(arr); } }
       }catch(e){}
+      // A draft saved BEFORE payroll was merged lacks doj/gross/net and would
+      // render "Rs 0". Backfill those fields from the published data by emp_no,
+      // without touching any edits the draft actually made.
+      const rawByNo=new Map(RAW.map(r=>[String(r.emp_no), r]));
+      EMP.forEach(e=>{ const src=rawByNo.get(String(e.emp_no)); if(!src) return;
+        ["doj","gross","net"].forEach(k=>{ if((e[k]==null||e[k]==="") && src[k]!=null && src[k]!=="") e[k]=src[k]; }); });
       try{
         const l = localStorage.getItem(LS_LOG);
         if (l){ const arr = JSON.parse(l); if(Array.isArray(arr)) changeLog = arr; }
@@ -214,14 +230,19 @@
     body.classList.remove("no-side");
     const units = groupsAt(topField, EMP);
     $("#side-total").textContent = units.length;
+    // gross salary total per top-level unit (for the sidebar list)
+    const grossBy=new Map();
+    if(ROLLUPS.length) for(const e of EMP){ const k=val(e,topField); grossBy.set(k,(grossBy.get(k)||0)+numv(e.gross)); }
     const box=$("#unitlist"); box.innerHTML="";
     const activeTop = path[0] ? path[0].value : null;
     for(const [name,ct] of units){
       const el=document.createElement("div");
       el.className="unit"+(name===activeTop?" active":"");
       el.dataset.name=name;
+      const grHTML = ROLLUPS.length ? `<span class="gr" title="Gross salary (total)">${esc(moneyM(grossBy.get(name)||0))}</span>` : "";
       el.innerHTML=`<span class="sw" style="background:${color(name)}"></span>
-        <span class="nm" title="${esc(name)}">${esc(name)}</span><span class="ct">${ct}</span>`;
+        <span class="nm" title="${esc(name)}">${esc(name)}</span>
+        <span class="uvals"><span class="ct">${ct}</span>${grHTML}</span>`;
       el.onclick=()=>{ path=[{field:topField,value:name}]; render(); $(".stage").scrollTop=0; };
       if(EDIT){
         el.ondragover=(ev)=>{ev.preventDefault();el.classList.add("drop");};
@@ -242,8 +263,8 @@
     return `<div class="node apex">
       <div class="role-eyebrow">${esc(CFG.orgName||"Organisation")}</div>
       <div class="nm">CHAIRMAN</div>
-      <div class="hc">▦ ${EMP.length.toLocaleString()} employees${topField?` · ${units} ${esc(fieldLabel(topField).toLowerCase())}s`:""}</div>
-      ${ROLLUPS.length?`<div class="hc money">Σ ${moneyShort(s.n)} payment · ${moneyShort(s.g)} gross</div>`:""}
+      <div class="hc"><span class="pic">👥</span> ${EMP.length.toLocaleString()} employees${topField?` · ${units} ${esc(fieldLabel(topField).toLowerCase())}s`:""}</div>
+      ${ROLLUPS.length?`<div class="hc money full"><span class="m-gross">Gross ${money(s.g)}</span> · <span class="m-net">Payment ${money(s.n)}</span></div>`:""}
     </div>`;
   }
   /* a single ancestor (or current) node in the vertical lineage spine */
@@ -254,8 +275,8 @@
     return `<div class="node lineage${isCurrent?" current":""}" data-nav="${i}">
       <div class="role-eyebrow">${esc(fieldLabel(p.field))}</div>
       <div class="nm">${esc(p.value)}</div>
-      <div class="hc">▦ ${sub.length.toLocaleString()} people</div>
-      ${ROLLUPS.length?`<div class="hc money">Σ ${moneyShort(s.n)} payment · ${moneyShort(s.g)} gross</div>`:""}
+      <div class="hc"><span class="pic">👥</span> ${sub.length.toLocaleString()} people</div>
+      ${ROLLUPS.length?`<div class="hc money">${payDuo(s.g,s.n)}</div>`:""}
     </div>`;
   }
   /* the whole chain from the top down to (and including) the current node,
@@ -275,14 +296,21 @@
   function groupBox(field,name,count,lead,isLeafParent,tot,acts){
     return `<div class="box" data-name="${esc(name)}" data-field="${esc(field)}">
       ${acts&&EDIT?`<div class="box-acts edit-only">
+        <button class="bx-add" title="Add a person to this ${esc(fieldLabel(field))}">＋</button>
         <button class="bx-move" title="Move / copy this ${esc(fieldLabel(field))}">↪</button>
         <button class="bx-del" title="Delete this ${esc(fieldLabel(field))}">✕</button>
       </div>`:""}
       <div class="swatch" style="background:${color(name)}"></div>
-      <div class="bname">${esc(name)}</div>
-      ${lead?`<div class="lead">${isLeafParent?"Senior":"Lead"}: <b>${esc(lead.name)}</b><span>${esc(lead.position)}</span></div>`:""}
-      ${tot&&ROLLUPS.length?`<div class="boxpay"><b>${moneyShort(tot.n)}</b><span>payment · ${moneyShort(tot.g)} gross</span></div>`:""}
-      <div class="foot"><div class="cnt">${count} <span>${count===1?"person":"people"}</span></div><div class="go">open ›</div></div>
+      <div class="bname-row">
+        <div class="bname">${esc(name)}</div>
+        ${lead?`<div class="blead-nm"><span>Lead</span><b>${esc(lead.name)}</b></div>`:""}
+      </div>
+      ${lead?`<div class="blead-pos">${esc(lead.position)}</div>`:""}
+      <div class="foot">
+        <div class="cnt">${count} <span>${count===1?"person":"people"}</span></div>
+        ${tot&&ROLLUPS.length?`<div class="boxpay">${payDuo(tot.g,tot.n)}</div>`:""}
+        <span class="go">open ›</span>
+      </div>
     </div>`;
   }
   function childrenRow(arr){
@@ -298,28 +326,28 @@
     const chips = CHIPS.map(k=>`<span class="chip">${esc(val(e,k))}</span>`).join("");
     let actions="";
     if(EDIT){
-      let move="";
-      if(hierarchy.length){
-        // options are filled lazily on first open (keeps big people lists fast)
-        move=`<select class="movesel" data-id="${e._id}" data-empty="1" title="Move this person to another node"><option value="">Move to…</option></select>`;
-      }
-      const leadBtn=`<button class="iconbtn lead-btn${e.is_lead?" on":""}" data-lead="${e._id}" title="${e.is_lead?"Remove Lead":"Make Lead of this group"}">${e.is_lead?"★ Lead":"☆ Lead"}</button>`;
-      actions=`<div class="ec-actions">${move}${leadBtn}<button class="iconbtn" data-edit="${e._id}">Edit</button></div>`;
+      const move = hierarchy.length ? `<button class="ic" data-move="${e._id}" title="Move / reassign">↪</button>` : "";
+      const leadBtn=`<button class="ic lead-btn${e.is_lead?" on":""}" data-lead="${e._id}" title="${e.is_lead?"Remove Lead":"Make Lead of this group"}">${e.is_lead?"★":"☆"}</button>`;
+      // compact icon toolbar, revealed only on hover (see .ec-actions in CSS)
+      actions=`<div class="ec-actions edit-only">${move}${leadBtn}<button class="ic" data-edit="${e._id}" title="Edit">✎</button></div>`;
     }
+    const ten = tenure(e.doj);
     return `<div class="ecard${isLead?" lead":""}${drag?" draggable":""}"${drag?' draggable="true"':""} data-id="${e._id}">
       <span class="ec-id">#${esc(val(e,"emp_no"))}</span>
       <div class="top">
         <div class="av" style="background:${color(val(e,hierarchy[0]||"department"),42,55)}">${esc(initials(val(e,"name")))}</div>
         <div style="min-width:0">
-          <div class="ec-name">${esc(val(e,"name"))}${isLead?'<span class="leadtag">Lead</span>':""}</div>
-          <div class="ec-pos">${esc(val(e,"position"))}</div>
+          <div class="ec-name">${esc(val(e,"name"))}</div>
+          <div class="ec-pos">${esc(val(e,"position"))}${isLead?'<span class="leadtag">Lead</span>':""}</div>
         </div>
       </div>
       <div class="ec-meta">${chips}</div>
       ${ROLLUPS.length?`<div class="ec-pay">
-        <span class="ecp"><label>Joined</label>${esc(fmtDate(e.doj))}</span>
-        <span class="ecp"><label>Gross</label>${e.gross?esc(money(e.gross)):"—"}</span>
-        <span class="ecp"><label>Payment</label>${e.net?esc(money(e.net)):"—"}</span>
+        <div class="ec-join">Joined <b>${esc(fmtDate(e.doj))}</b>${ten?` · <span class="ten">${esc(ten)} tenure</span>`:""}</div>
+        <div class="ec-sal">
+          <span class="ecp"><label>Gross</label><b class="m-gross">${e.gross?esc(money(e.gross)):"—"}</b></span>
+          <span class="ecp"><label>Payment</label><b class="m-net">${e.net?esc(money(e.net)):"—"}</b></span>
+        </div>
       </div>`:""}
       ${actions}
     </div>`;
@@ -424,7 +452,7 @@
         <span class="tsw" style="background:${color(name)}"></span>
         <span class="tname">${esc(name)}</span>
         <span class="tcount">${ct}</span>
-        ${lead?`<span class="tlead">${esc(leafParent?"Senior":fieldLabel(field)+" lead")}: <b>${esc(lead.name)}</b></span>`:""}
+        ${lead?`<span class="tlead">Lead: <b>${esc(lead.name)}</b></span>`:""}
       </div>`;
       if(open) html+=treeRows(np,sub,depth+1);
     }
@@ -445,6 +473,17 @@
     });
   }
 
+  /* people-level header, with a contextual "Add person" that pre-fills the
+     current path (so the new hire lands in the section you're looking at) */
+  function peopleHdr(label){
+    const add = EDIT ? `<button class="addhere edit-only" id="add-here" title="Add a person to this group">＋ Add person</button>` : "";
+    return `<div class="grouphdr"><span>${esc(label)}</span><span class="gh-line"></span>${add}</div>`;
+  }
+  function wireAddHere(){
+    const ah=$("#add-here"); if(!ah) return;
+    ah.onclick=()=>{ const pre={}; path.forEach(p=>pre[p.field]=p.value); openEditor(null, pre); };
+  }
+
   /* ---- main render ---- */
   function render(){
     stats();
@@ -457,9 +496,9 @@
     if(path.length===0 && hierarchy.length===0){
       // no hierarchy configured -> everyone as leaves
       tree.innerHTML = apexNode()+`<div class="down"></div>`+
-        `<div class="grouphdr">All people · senior first</div>`+
+        peopleHdr("All people · senior first")+
         `<div class="emps">${list.slice().sort(bySeniority).map((e,i)=>empCard(e,false)).join("")}</div>`;
-      wireSpine(); wireCards(); return;
+      wireSpine(); wireCards(); wireAddHere(); return;
     }
     // lineageSpine() = apex + every ancestor down to the current node, so the
     // parent chain is always visible (Chairman › Facilities Mgmt › Fleet › …)
@@ -477,9 +516,9 @@
     } else { // leaf: employees
       const {arr,lead}=peopleSorted(list);
       tree.innerHTML = lineageSpine()+`<div class="down"></div>`+
-        `<div class="grouphdr">People · senior first</div>`+
+        peopleHdr("People · senior first")+
         `<div class="emps">${arr.map(e=>empCard(e, arr.length>1 && e===lead)).join("")}</div>`;
-      wireSpine(); wireCards();
+      wireSpine(); wireCards(); wireAddHere();
     }
   }
 
@@ -499,6 +538,9 @@
     $$(".box").forEach(b=>{
       const name=b.dataset.name;
       b.onclick=()=>{ path=path.concat(skipped, [{field,value:name}]); render(); $(".stage").scrollTop=0; };
+      const ad=b.querySelector(".bx-add"); if(ad) ad.onclick=(ev)=>{ev.stopPropagation();
+        const gp=path.concat(skipped,[{field,value:name}]); const pre={}; gp.forEach(p=>pre[p.field]=p.value);
+        openEditor(null, pre);};
       const mv=b.querySelector(".bx-move"); if(mv) mv.onclick=(ev)=>{ev.stopPropagation(); openGroupMove(field,name,skipped);};
       const dl=b.querySelector(".bx-del"); if(dl) dl.onclick=(ev)=>{ev.stopPropagation(); deleteGroup(field,name,skipped);};
     });
@@ -510,24 +552,7 @@
       c.ondragstart=(ev)=>{ev.dataTransfer.setData("text/plain",id);ev.dataTransfer.effectAllowed="move";c.classList.add("dragging");};
       c.ondragend=()=>c.classList.remove("dragging");
     });
-    $$(".ecard select.movesel").forEach(sel=>{
-      const fill=()=>{ if(sel.dataset.empty){ sel.insertAdjacentHTML("beforeend", moveOptionsHTML()); delete sel.dataset.empty; } };
-      sel.addEventListener("mousedown",fill);
-      sel.addEventListener("focus",fill);
-      sel.onchange=async ()=>{
-        if(!sel.value) return;
-        const id=+sel.dataset.id, tp=parsePathKey(sel.value), e=EMP.find(x=>x._id===id);
-        const top=fieldLabel(hierarchy[0]);
-        const dest=tp.map(x=>x.value).join(" › ");
-        sel.value="";
-        const c=await choose(`Move ${e.name}`,
-          `Move to <b>${esc(dest)}</b>. Apply the move to…`,
-          [{label:`Whole hierarchy`, kind:"primary", value:"full"},
-           {label:`Just the ${esc(top)}`, kind:"subtle", value:"dept"}]);
-        if(c==="full") moveToNode(id, tp);
-        else if(c==="dept") moveToNode(id, [tp[0]], {fixDeeper:false});
-      };
-    });
+    $$("[data-move]").forEach(btn=>btn.onclick=()=>openMove(+btn.dataset.move));
     $$("[data-lead]").forEach(btn=>btn.onclick=()=>setLead(+btn.dataset.lead));
     $$("[data-edit]").forEach(btn=>btn.onclick=()=>openEditor(+btn.dataset.edit));
   }
@@ -556,6 +581,26 @@
     render();
     const bx=document.querySelector(`.box[data-name="${cssEsc(targetPath[targetPath.length-1].value)}"]`);
     if(bx){bx.classList.remove("flash");void bx.offsetWidth;bx.classList.add("flash");}
+  }
+
+  /* ---- single-person move: pick a destination, then apply scope ---- */
+  let movingId=null;
+  function openMove(id){
+    const e=EMP.find(x=>x._id===id); if(!e) return;
+    movingId=id;
+    const top=fieldLabel(hierarchy[0]||"department");
+    $("#mv-title").textContent=`Move ${e.name}`;
+    $("#mv-msg").innerHTML=`Reassign <b>${esc(e.name)}</b> — ${esc(val(e,"position"))}. Pick a destination, then apply to the whole hierarchy or just the ${esc(top)}.`;
+    $("#mv-target").innerHTML=`<option value="">Select destination…</option>`+moveOptionsHTML();
+    $("#mv-dept").textContent=`Just the ${top}`;
+    $("#mv-overlay").classList.add("show");
+  }
+  function doPersonMove(scope){
+    const sel=$("#mv-target"); if(!sel || !sel.value){ toast("Pick a destination first"); return; }
+    const id=movingId, tp=parsePathKey(sel.value);
+    $("#mv-overlay").classList.remove("show");
+    if(scope==="full") moveToNode(id, tp);
+    else moveToNode(id, [tp[0]], {fixDeeper:false});
   }
 
   /* ---- generic choice dialog (returns a Promise of the chosen value) ---- */
@@ -638,9 +683,9 @@
 
   /* ---- employee editor / add ---- */
   let editingId=null;
-  function openEditor(id){
+  function openEditor(id, prefill){
     editingId=id;
-    const e = id==null ? {} : EMP.find(x=>x._id===id) || {};
+    const e = id==null ? (prefill||{}) : EMP.find(x=>x._id===id) || {};
     $("#emp-title").textContent = id==null ? "Add person" : "Edit person";
     $("#emp-delete").style.display = id==null ? "none" : "";
     const body=$("#emp-fields");
@@ -756,28 +801,75 @@
     return {field, A, B, keys};
   }
   function openCompare(){ renderCompare(); $("#cmp-overlay").classList.add("show"); }
+  /* The original published organogram (As-is), rendered intact from RAW as a
+     CHART (boxes + connectors). Collapsed = top level under the Chairman;
+     "Expand all" blows the whole tree open. Always read-only reference. */
+  let blExpanded=false;
+  /* a compact person node for the expanded baseline chart (the leaves) */
+  function blPerson(e,isLead){
+    return `<div class="pnode${isLead?" lead":""}">
+      <div class="pn-top">
+        <span class="pn-av" style="background:${color(val(e,hierarchy[0]||"department"),42,55)}">${esc(initials(val(e,"name")))}</span>
+        <span class="pn-id">#${esc(val(e,"emp_no"))}</span>
+      </div>
+      <div class="pn-name">${esc(val(e,"name"))}${isLead?'<span class="leadtag">Lead</span>':""}</div>
+      <div class="pn-pos">${esc(val(e,"position"))}</div>
+      ${ROLLUPS.length?`<div class="pn-pay"><span class="m-gross">${e.gross?esc(money(e.gross)):"—"}</span> <span class="m-net">${e.net?esc(money(e.net)):"—"}</span></div>`:""}
+    </div>`;
+  }
+  /* baseline chart branch — like chartBranch but recurses all the way down to
+     the individual employees (shown as person nodes under their leaf group) */
+  function blBranch(p, list){
+    const plan=planLevel(p.length, list);
+    const field=plan.field;
+    if(!field){ // leaf -> people
+      const arr=list.slice().sort(bySeniority), lead=arr[0];
+      const cells=arr.map(e=>`<div class="child"><div class="boxwrap">${blPerson(e, arr.length>1&&e===lead)}</div></div>`);
+      const cls=cells.length===1?"children single":"children chart-row";
+      return `<div class="${cls}">${cells.join("")}</div>`;
+    }
+    const isLeafParent=(plan.depth===hierarchy.length-1);
+    const cells=groupsAt(field,list).map(([name,ct])=>{
+      const np=p.concat(plan.skipped,[{field,value:name}]);
+      const sub=list.filter(e=>val(e,field)===name);
+      const box=groupBox(field,name,ct,leadOf(sub),isLeafParent,sumPay(sub));
+      return `<div class="child"><div class="boxwrap">${box}</div><div class="down"></div>${blBranch(np,sub)}</div>`;
+    });
+    const cls=cells.length===1?"children single":"children chart-row";
+    return `<div class="${cls}">${cells.join("")}</div>`;
+  }
+  function baselineChart(){
+    const blData=reindex(RAW);
+    const topField=hierarchy[0];
+    const units=topField?groupsAt(topField,blData).length:0;
+    const s=sumPay(blData);
+    const apex=`<div class="node apex">
+      <div class="role-eyebrow">${esc(CFG.orgName||"Organisation")}</div>
+      <div class="nm">CHAIRMAN</div>
+      <div class="hc"><span class="pic">👥</span> ${blData.length.toLocaleString()} employees${topField?` · ${units} ${esc(fieldLabel(topField).toLowerCase())}s`:""}</div>
+      ${ROLLUPS.length?`<div class="hc money full"><span class="m-gross">Gross ${money(s.g)}</span> · <span class="m-net">Payment ${money(s.n)}</span></div>`:""}
+    </div>`;
+    let body="";
+    if(!topField){ body=""; }
+    else if(blExpanded){ body=blBranch([],blData); }
+    else {
+      const isLeafParent=(hierarchy.length===1);
+      const cells=groupsAt(topField,blData).map(([name,ct])=>{
+        const sub=blData.filter(e=>val(e,topField)===name);
+        return `<div class="child">${groupBox(topField,name,ct,leadOf(sub),isLeafParent,sumPay(sub))}</div>`;
+      });
+      const cls=cells.length===1?"children single":"children chart-row";
+      body=`<div class="${cls}">${cells.join("")}</div>`;
+    }
+    return `<div class="bl-head">
+        <span class="bl-title">Original organogram (As-is)</span>
+        <button class="tbtn" id="bl-toggle">${blExpanded?"⊟ Collapse":"⊞ Expand all"}</button>
+      </div>
+      <div class="bl-chart"><div class="chart-canvas">${apex}${body?`<div class="down"></div>`+body:""}</div></div>`;
+  }
   function renderCompare(){
-    const {field,A,B,keys}=compareRows();
-    const dcell=(d,money)=>{ const cls=d>0?"up":d<0?"down":""; const s=d>0?"+":"";
-      return `<td class="cmpd ${cls}">${d? s+(money?moneyShort(d):d) : "—"}</td>`; };
-    const rows=keys.map(k=>{
-      const a=A.get(k), b=B.get(k);
-      const tag=!a?' <span class="cmp-tag add">new</span>':(!b?' <span class="cmp-tag rem">removed</span>':"");
-      return `<tr class="${!a?"cmp-add":(!b?"cmp-rem":"")}">
-        <td>${esc(k)}${tag}</td>
-        <td>${a?a.n:0}</td><td>${b?b.n:0}</td>${dcell((b?b.n:0)-(a?a.n:0),false)}
-        <td>${a?moneyShort(a.p):"—"}</td><td>${b?moneyShort(b.p):"—"}</td>${dcell((b?b.p:0)-(a?a.p:0),true)}
-      </tr>`;
-    }).join("");
-    const ta=sumPay(RAW), tb=sumPay(EMP);
-    const totals=`<tr class="cmp-total">
-      <td>TOTAL</td><td>${RAW.length}</td><td>${EMP.length}</td>${dcell(EMP.length-RAW.length,false)}
-      <td>${moneyShort(ta.n)}</td><td>${moneyShort(tb.n)}</td>${dcell(tb.n-ta.n,true)}</tr>`;
-    $("#cmp-body").innerHTML=`<p class="note" style="margin-top:0">Baseline (<b>As-is</b>) is the published data; <b>To-be</b> is your current working set, compared by ${esc(fieldLabel(field))}.</p>
-      <div class="lg-wrap"><table class="lg cmp">
-      <thead><tr><th>${esc(fieldLabel(field))}</th><th>As-is ppl</th><th>To-be ppl</th><th>Δ</th>
-        <th>As-is pay</th><th>To-be pay</th><th>Δ pay</th></tr></thead>
-      <tbody>${rows}${totals}</tbody></table></div>`;
+    $("#cmp-body").innerHTML=baselineChart();
+    const bt=$("#bl-toggle"); if(bt) bt.onclick=()=>{ blExpanded=!blExpanded; renderCompare(); };
   }
   function exportCompare(){
     const {field,A,B,keys}=compareRows();
@@ -904,6 +996,8 @@
       $("#emp-delete").onclick=deleteEditor;
       const gmv=$("#gm-move"); if(gmv) gmv.onclick=()=>doGroupMove("move");
       const gcp=$("#gm-copy"); if(gcp) gcp.onclick=()=>doGroupMove("copy");
+      const mvf=$("#mv-full"); if(mvf) mvf.onclick=()=>doPersonMove("full");
+      const mvd=$("#mv-dept"); if(mvd) mvd.onclick=()=>doPersonMove("dept");
       const cb=$("#changes-btn"); if(cb) cb.onclick=openLog;
       const cmpb=$("#compare-btn"); if(cmpb) cmpb.onclick=openCompare;
       const cmpx=$("#cmp-export"); if(cmpx) cmpx.onclick=exportCompare;
