@@ -65,10 +65,8 @@ body{background:transparent;color:var(--ink)}
   -webkit-mask-image:linear-gradient(to top,#000 86%,transparent 100%);
   mask-image:linear-gradient(to top,#000 86%,transparent 100%);
 }
-.bg-skyline .sky-photo{opacity:.38;filter:brightness(.9) saturate(1.1) contrast(1.05)}
-.bg-skyline .sky-fill{fill:rgba(7,12,24,.6)}
-.bg-skyline .sky-edge{stroke:url(#rl-grad);stroke-width:2.6;opacity:.8;filter:url(#sky-glow)}
-.bg-skyline .sky-light{fill:#e6fffa;filter:url(#sky-glow)}
+.bg-skyline .sky-photo{opacity:.82;filter:brightness(.92) saturate(1.12) contrast(1.06)}
+.bg-skyline .sky-light{fill:#2bffe6;filter:url(#sky-glow)}   /* neon teal light */
 @media(prefers-reduced-motion:reduce){.aurora,.bg-skyline .sky-light animateMotion{animation:none!important}}
 
 /* ---------- header (glassy translucent) ---------- */
