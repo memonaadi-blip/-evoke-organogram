@@ -1,14 +1,15 @@
 /* =====================================================================
-   Evoke Organogram — "Income Fix" dark theme overlay
-   Loaded AFTER styles.css so it overrides the light palette. Concept &
-   colours mirror the Income Fix site: deep navy, teal→sky→indigo gradient,
-   glassy cards, animated particle/aurora background, Imarat skyline, and a
-   neon building that travels an orbit (the "moving ball").
-   Delete this <link> (and bg layers) to revert to the light theme.
+   Evoke Organogram — "Boardroom at dusk" theme overlay
+   Loaded AFTER styles.css. Direction: a quiet, professional org chart of
+   light paper cards laid over a deep-navy night sky with the Imarat skyline
+   and a single light tracing the rooftops. The atmosphere is the one bold
+   element; the cards are minimal, light-toned, dark-ink, one teal accent.
+   Delete this <link> (and the bg layers) to revert to the original theme.
    ===================================================================== */
 
-/* ---------- palette remap (overrides :root in styles.css) ---------- */
+/* ---------- palette ---------- */
 :root{
+  /* chrome (dark) */
   --ink:#eef2fa;
   --paper:#05070d;
   --card:rgba(255,255,255,0.05);
@@ -16,29 +17,25 @@
   --line-dk:rgba(255,255,255,0.08);
   --muted:#a8b3c9;
   --muted-dk:#828fa8;
-
-  /* accent (was gold) -> teal / sky */
-  --gold:#5eead4;
-  --gold-2:#7fe7d6;
-  --gold-soft:rgba(94,234,212,0.14);
-
-  /* "green" (header/hover) -> navy + teal-soft */
-  --green:#0c1626;
-  --green-2:#070b14;
-  --green-soft:rgba(94,234,212,0.10);
-
-  --panel:#080c16;            /* sidebar */
-  --conn:rgba(125,211,252,0.22);
+  --panel:#0a0e1a;                 /* sidebar */
+  --green:#0c1626; --green-2:#070b14; --green-soft:rgba(20,184,166,0.10);
+  --gold:#19b8a6; --gold-2:#0f9e8f; --gold-soft:rgba(25,184,166,0.14);
+  --conn:rgba(150,170,200,0.22);   /* tree connectors — calm cool grey */
   --good:#34d399; --danger:#fb7185;
+  --teal:#19b8a6; --sky:#38bdf8; --indigo:#818cf8;
 
-  --teal:#5eead4; --sky:#38bdf8; --indigo:#818cf8;
-  --grad:linear-gradient(120deg,#5eead4,#38bdf8 45%,#818cf8);
+  /* the single accent + data tones (used on light cards) */
+  --accent:#0f766e;                /* deep teal */
+  --accent-2:#19b8a6;              /* brighter teal for dark chrome controls */
+  --accent-soft:rgba(15,118,110,0.16);
+  --pay:#8a5a2b;                   /* muted bronze (payment vs teal gross) */
 
+  --grad:linear-gradient(120deg,#19b8a6,#0f766e);
   --shadow:0 1px 2px rgba(0,0,0,.35),0 12px 30px rgba(0,0,0,.45);
   --shadow-lg:0 10px 28px rgba(0,0,0,.5),0 26px 64px rgba(0,0,0,.6);
+  --card-shadow:0 2px 5px rgba(0,0,0,.28),0 16px 40px rgba(0,0,0,.45);
 }
 
-/* page is transparent so the fixed background layers show through */
 html{background:#05070d}
 body{background:transparent;color:var(--ink)}
 
@@ -46,160 +43,187 @@ body{background:transparent;color:var(--ink)}
 #bg-canvas{position:fixed;inset:0;z-index:-4;width:100%;height:100%;pointer-events:none}
 .bg-grid{
   position:fixed;inset:0;z-index:-3;pointer-events:none;
-  background-image:linear-gradient(rgba(255,255,255,0.025) 1px,transparent 1px),
-                   linear-gradient(90deg,rgba(255,255,255,0.025) 1px,transparent 1px);
-  background-size:60px 60px;
+  background-image:linear-gradient(rgba(255,255,255,0.02) 1px,transparent 1px),
+                   linear-gradient(90deg,rgba(255,255,255,0.02) 1px,transparent 1px);
+  background-size:64px 64px;
   -webkit-mask-image:radial-gradient(circle at 50% 32%,#000 0%,transparent 78%);
   mask-image:radial-gradient(circle at 50% 32%,#000 0%,transparent 78%);
 }
-.aurora{position:fixed;border-radius:50%;filter:blur(95px);opacity:.30;z-index:-4;pointer-events:none;will-change:transform}
-.aurora-1{width:520px;height:520px;background:#0ea5e9;top:-130px;left:-110px;animation:flo1 17s ease-in-out infinite}
-.aurora-2{width:480px;height:480px;background:#6366f1;top:34%;right:-150px;animation:flo2 21s ease-in-out infinite}
+.aurora{position:fixed;border-radius:50%;filter:blur(100px);opacity:.13;z-index:-4;pointer-events:none;will-change:transform}
+.aurora-1{width:520px;height:520px;background:#0e7490;top:-130px;left:-110px;animation:flo1 17s ease-in-out infinite}
+.aurora-2{width:480px;height:480px;background:#155e63;top:34%;right:-150px;animation:flo2 21s ease-in-out infinite}
 .aurora-3{width:440px;height:440px;background:#14b8a6;bottom:-140px;left:32%;animation:flo1 24s ease-in-out infinite reverse}
 @keyframes flo1{0%,100%{transform:translate(0,0)}50%{transform:translate(60px,40px)}}
 @keyframes flo2{0%,100%{transform:translate(0,0)}50%{transform:translate(-50px,60px)}}
 
-/* Imarat skyline at the bottom + a neon light that runs along the edges */
+/* Imarat skyline + the single light streak running the rooflines */
 .bg-skyline{
   position:fixed;left:0;right:0;bottom:0;width:100%;height:auto;z-index:-3;pointer-events:none;
   -webkit-mask-image:linear-gradient(to top,#000 86%,transparent 100%);
   mask-image:linear-gradient(to top,#000 86%,transparent 100%);
 }
-.bg-skyline .sky-photo{opacity:.28;filter:brightness(.78) saturate(1.05) contrast(1.04)}
-/* a light streak running along the rooflines (minimal single neon colour) */
+.bg-skyline .sky-photo{opacity:.26;filter:brightness(.78) saturate(1.02) contrast(1.04)}
 .bg-skyline .streak{fill:none;stroke:#2bffe6;stroke-linecap:round;stroke-linejoin:round;filter:url(#sky-glow)}
-.bg-skyline .streak-tail{stroke-width:5;opacity:.16;stroke-dasharray:150 1000}
-.bg-skyline .streak-mid{stroke-width:3.4;opacity:.42;stroke-dasharray:84 1000}
-.bg-skyline .streak-core{stroke-width:2.4;opacity:.98;stroke-dasharray:34 1000}
-@media(prefers-reduced-motion:reduce){.aurora,.bg-skyline .sky-light animateMotion{animation:none!important}}
+.bg-skyline .streak-tail{stroke-width:5;opacity:.14;stroke-dasharray:150 1000}
+.bg-skyline .streak-mid{stroke-width:3.4;opacity:.38;stroke-dasharray:84 1000}
+.bg-skyline .streak-core{stroke-width:2.4;opacity:.95;stroke-dasharray:34 1000}
+@media(prefers-reduced-motion:reduce){.aurora{animation:none!important}}
 
-/* ---------- header (glassy translucent) ---------- */
+/* ---------- chrome: header / sidebar / breadcrumb (stay dark) ---------- */
 header{background:rgba(7,11,20,0.72)!important;backdrop-filter:blur(14px);
   -webkit-backdrop-filter:blur(14px);border-bottom:1px solid var(--line);box-shadow:0 1px 0 rgba(255,255,255,.03)}
-.btn.gold{background:var(--grad);border:none;color:#05070d;font-weight:700}
-.btn.gold:hover{filter:brightness(1.06)}
-.viewseg button.active{background:var(--grad);color:#05070d}
-.ro-badge{color:var(--teal);border-color:rgba(94,234,212,.4);background:rgba(94,234,212,.12)}
+.btn.gold{background:var(--accent-2);border:none;color:#042a25;font-weight:700}
+.btn.gold:hover{filter:brightness(1.08)}
+.viewseg button.active{background:var(--accent-2);color:#042a25}
+.ro-badge{color:var(--accent-2);border-color:rgba(25,184,166,.4);background:rgba(25,184,166,.12)}
 .menu-pop{background:#0c1322;border:1px solid var(--line)}
 .menu-pop button{color:var(--ink)}
-.menu-pop button:hover{background:rgba(94,234,212,.10)}
+.menu-pop button:hover{background:rgba(25,184,166,.10)}
 
-/* ---------- banner ---------- */
+.crumbs a{color:var(--muted)}
+.crumbs a:hover{background:rgba(25,184,166,.10);color:#bdeee6}
+.crumbs a.here{color:var(--accent-2);background:rgba(25,184,166,.12)}
+.crumbs .sep{color:rgba(255,255,255,.25)}
+
 .banner{background:rgba(56,189,248,.08);border-bottom:1px solid var(--line);color:#cfe0f5}
 .banner b{color:#fff}
 .banner button{background:rgba(255,255,255,.06);border:1px solid var(--line);color:#cfe0f5}
-.banner button.solid{background:var(--grad);border:none;color:#05070d}
+.banner button.solid{background:var(--accent-2);border:none;color:#042a25}
 
-/* ---------- sidebar ---------- */
-.sidebar{background:rgba(8,12,22,0.86);backdrop-filter:blur(10px);border-right:1px solid var(--line)}
-.unit.active{background:rgba(94,234,212,.14);border-color:rgba(94,234,212,.4)}
-.unit .gr{color:var(--teal)}
-@keyframes uflash{0%{background:rgba(94,234,212,.4)}100%{background:rgba(94,234,212,.14)}}
+.sidebar{background:rgba(8,12,22,0.88);backdrop-filter:blur(10px);border-right:1px solid var(--line)}
+.unit.active{background:rgba(25,184,166,.14);border-color:rgba(25,184,166,.4)}
+.unit .gr{color:#7fd9c8}
+@keyframes uflash{0%{background:rgba(25,184,166,.4)}100%{background:rgba(25,184,166,.14)}}
 
-/* ---------- connectors ---------- */
 .down,.children::before,.child::before,.children.chart-row::before,.children.chart-row>.child::before{background:var(--conn)}
 
-/* ---------- nodes / apex ---------- */
-.node{background:linear-gradient(160deg,rgba(255,255,255,0.07),rgba(255,255,255,0.02)),rgba(6,10,20,0.76);
-  border:1px solid var(--line);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
-.node.apex{border:1.5px solid rgba(94,234,212,.55);
-  background:linear-gradient(160deg,rgba(94,234,212,0.10),rgba(56,189,248,0.04) 60%,rgba(255,255,255,0.02));
-  box-shadow:0 0 0 1px rgba(94,234,212,.08),0 24px 70px rgba(0,0,0,.55)}
-.node .role-eyebrow{color:var(--teal)}
+/* =====================================================================
+   LIGHT CARDS — paper-toned surfaces with dark ink and one teal accent.
+   Re-scope the inherited colour tokens inside every card so the base
+   styles resolve to dark-on-light automatically.
+   ===================================================================== */
+.node,.box,.ecard,.trow,.tperson,.bl-chart .pnode{
+  --card:#ffffff;
+  --ink:#16203a;
+  --muted:#5b6a82;
+  --muted-dk:#8893a6;
+  --line:rgba(22,33,58,0.12);
+  --line-dk:rgba(22,33,58,0.10);
+  --gold:#0f766e; --gold-2:#0c5e57; --gold-soft:rgba(15,118,110,0.10);
+  --green:#0f766e; --green-2:#16203a; --green-soft:rgba(15,118,110,0.08);
+  --conn:rgba(22,33,58,0.18);
+  color:#16203a;
+}
+
+/* nodes / apex / lineage */
+.node{background:linear-gradient(180deg,#ffffff,#eef1f7);border:1px solid var(--line);box-shadow:var(--card-shadow);
+  backdrop-filter:none;-webkit-backdrop-filter:none}
+.node.apex{background:linear-gradient(180deg,#ffffff,#e9eef6);border:1px solid var(--line);border-top:3px solid var(--accent);
+  box-shadow:0 4px 12px rgba(0,0,0,.32),0 24px 64px rgba(0,0,0,.5)}
+.node.lineage.current{border:1px solid var(--accent);background:linear-gradient(180deg,#ffffff,#eaf3f1)}
+.node .role-eyebrow{color:var(--accent)}
 .node .nm{color:var(--ink)}
-.node .hc{color:var(--teal);background:rgba(94,234,212,.10);border:1px solid rgba(94,234,212,.20)}
-.node .hc.money{background:rgba(255,255,255,.04);border:1px solid var(--line)}
-.node.lineage.current{border:1.5px solid rgba(94,234,212,.5);
-  background:linear-gradient(160deg,rgba(94,234,212,0.10),rgba(255,255,255,0.02))}
+.node .hc{color:#46546d;background:#eaeef5;border:1px solid var(--line)}
+.node .hc.money{background:#eef1f7;border:1px solid var(--line)}
+.node .hc .pic{filter:grayscale(.55) brightness(.9)}
 
-/* ---------- two salary colours (teal gross / amber payment) ---------- */
-.m-gross{color:#5eead4}
-.m-net{color:#fbbf24}
-.ec-sal .ecp b.m-gross,.bl-chart .pn-pay .m-gross{color:#5eead4}
-.ec-sal .ecp b.m-net,.bl-chart .pn-pay .m-net{color:#fbbf24}
+/* two data tones — deep teal gross / muted bronze payment (no glow) */
+.m-gross,.ec-sal .ecp b.m-gross,.bl-chart .pn-pay .m-gross{color:#0f766e}
+.m-net,.ec-sal .ecp b.m-net,.bl-chart .pn-pay .m-net{color:#8a5a2b}
 
-/* ---------- group boxes ---------- */
-.box{background:linear-gradient(160deg,rgba(255,255,255,0.07),rgba(255,255,255,0.02)),rgba(6,10,20,0.82);border:1px solid var(--line)}
+/* group boxes */
+.box{background:linear-gradient(180deg,#ffffff,#eef1f7);border:1px solid var(--line);box-shadow:var(--card-shadow)}
 .box .bname{color:var(--ink)}
-.box .blead-nm span{color:var(--teal)}
+.box .blead-nm span{color:var(--accent)}
 .box .blead-nm b,.box .lead b{color:var(--ink)}
-.box .go{color:var(--teal)}
-.box-acts button{background:rgba(255,255,255,.06);border:1px solid var(--line);color:var(--muted)}
-.box-acts .bx-add:hover{background:rgba(94,234,212,.16);border-color:var(--teal);color:var(--teal)}
-.box-acts .bx-move:hover{background:rgba(94,234,212,.12);border-color:var(--teal);color:var(--teal)}
-.box-acts .bx-del:hover{background:rgba(251,113,133,.14);border-color:var(--danger);color:var(--danger)}
-@keyframes bflash{0%{background:rgba(94,234,212,.18);border-color:var(--teal)}100%{background:rgba(255,255,255,.04);border-color:var(--line)}}
+.box .go{color:var(--accent)}
+.box-acts button{background:#fff;border:1px solid var(--line);color:#6a7790}
+.box-acts .bx-add:hover{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.box-acts .bx-move:hover{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.box-acts .bx-del:hover{background:rgba(180,69,58,.12);border-color:#b4453a;color:#b4453a}
+@keyframes bflash{0%{background:#e9f3f1;border-color:var(--accent)}100%{background:#fff;border-color:var(--line)}}
 
-/* ---------- employee cards ---------- */
-.ecard{background:linear-gradient(160deg,rgba(255,255,255,0.07),rgba(255,255,255,0.02)),rgba(6,10,20,0.82);border:1px solid var(--line)}
-.ecard.lead{border-color:rgba(94,234,212,.55);box-shadow:0 0 0 1px rgba(94,234,212,.18),var(--shadow)}
+/* employee cards */
+.ecard{background:linear-gradient(180deg,#ffffff,#eef1f7);border:1px solid var(--line);box-shadow:var(--card-shadow)}
+.ecard.lead{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent-soft),var(--card-shadow)}
 .ec-id{color:var(--muted-dk)}
 .ec-name{color:var(--ink)}
-.leadtag{color:#05070d;background:var(--teal)}
-.chip{color:var(--teal);background:rgba(94,234,212,.10);border:1px solid rgba(94,234,212,.18)}
-.ec-join .ten{color:var(--teal)}
-.ec-actions .ic{background:rgba(255,255,255,.06);border:1px solid var(--line);color:var(--muted)}
-.ec-actions .ic:hover{background:rgba(94,234,212,.14);border-color:var(--teal);color:var(--teal)}
-.ec-actions .ic.lead-btn.on{background:rgba(94,234,212,.18);border-color:var(--teal);color:var(--teal)}
-@keyframes hl{0%,40%{box-shadow:0 0 0 3px var(--teal)}100%{box-shadow:var(--shadow)}}
+.ec-pos{color:var(--muted)}
+.leadtag{color:#fff;background:var(--accent)}
+.chip{color:#48566e;background:#eef1f6;border:1px solid var(--line)}
+.ec-join{color:var(--muted)}
+.ec-join .ten{color:var(--accent)}
+.ec-actions .ic{background:#fff;border:1px solid var(--line);color:#6a7790}
+.ec-actions .ic:hover{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.ec-actions .ic.lead-btn.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+@keyframes hl{0%,40%{box-shadow:0 0 0 3px var(--accent)}100%{box-shadow:var(--card-shadow)}}
 
-/* ---------- people header add button ---------- */
-.addhere{background:rgba(94,234,212,.12);border:1px solid rgba(94,234,212,.4);color:var(--teal)}
-.addhere:hover{background:rgba(94,234,212,.2)}
+/* people header add button (sits over the dark page) */
+.addhere{background:rgba(25,184,166,.12);border:1px solid rgba(25,184,166,.4);color:#7fd9c8}
+.addhere:hover{background:rgba(25,184,166,.2)}
+.grouphdr .gh-line{background:var(--line)}
 
-/* ---------- search results ---------- */
+/* ---------- search results (dark chrome) ---------- */
 .results{background:#0c1322;border:1px solid var(--line)}
-.res:hover{background:rgba(94,234,212,.08)}
-.res .rn{color:var(--ink)}
-.res .rpath{color:var(--teal)}
+.res{border-bottom:1px solid var(--line)}
+.res:hover{background:rgba(25,184,166,.08)}
+.res .rn{color:#eaf0fb}
+.res .rp{color:var(--muted)}
+.res .rpath{color:#7fd9c8}
 
-/* ---------- outline (Hierarchy) view ---------- */
+/* ---------- outline (Hierarchy) view — light rows ---------- */
 .tbtn{background:rgba(255,255,255,.05);border:1px solid var(--line);color:var(--ink)}
-.tbtn:hover{border-color:var(--teal)}
-.tbtn.primary{background:var(--grad);border:none;color:#05070d}
-.trow{background:linear-gradient(160deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02));border:1px solid var(--line)}
-.trow.open{background:rgba(94,234,212,.06);border-color:rgba(94,234,212,.3)}
-.tcaret{color:var(--teal)}
+.tbtn:hover{border-color:var(--accent-2)}
+.tbtn.primary{background:var(--accent-2);border:none;color:#042a25}
+.trow{background:#fff;border:1px solid var(--line);box-shadow:0 1px 3px rgba(0,0,0,.22)}
+.trow.open{background:#f1f6f5;border-color:var(--accent)}
+.tcaret{color:var(--accent)}
 .tname{color:var(--ink)}
-.tcount{background:rgba(255,255,255,.05);border:1px solid var(--line);color:var(--muted)}
+.tcount{background:#eef1f6;border:1px solid var(--line);color:var(--muted)}
+.tlead{color:var(--muted)}
 .tlead b{color:var(--ink)}
-.tperson{background:rgba(255,255,255,.04);border:1px solid var(--line)}
-.tperson.lead{border-color:rgba(94,234,212,.5)}
+.tperson{background:#fff;border:1px solid var(--line)}
+.tperson.lead{border-color:var(--accent)}
 .tpname{color:var(--ink)}
+.tppos{color:var(--muted)}
 .tpid{color:var(--muted-dk)}
 
-/* ---------- baseline person nodes ---------- */
-.bl-chart{background:rgba(5,7,13,.5);border:1px solid var(--line)}
-.bl-chart .pnode{background:linear-gradient(160deg,rgba(255,255,255,0.07),rgba(255,255,255,0.02)),rgba(6,10,20,0.82);border:1px solid var(--line)}
-.bl-chart .pnode.lead{border-color:rgba(94,234,212,.5)}
+/* ---------- baseline (As-is) chart ---------- */
+.bl-chart{background:rgba(5,7,13,.45);border:1px solid var(--line)}
+.bl-title{color:#eaf0fb}
+.bl-chart .pnode{background:linear-gradient(180deg,#ffffff,#eef1f7);border:1px solid var(--line);box-shadow:var(--card-shadow)}
+.bl-chart .pnode.lead{border-color:var(--accent)}
 .bl-chart .pn-name{color:var(--ink)}
+.bl-chart .pn-pos{color:var(--muted)}
 .bl-chart .pn-id{color:var(--muted-dk)}
-.bl-chart .boxwrap.open>.box{border-color:rgba(94,234,212,.55);box-shadow:0 0 0 1px rgba(94,234,212,.18),var(--shadow)}
+.bl-chart .boxwrap.open>.box{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent-soft),var(--card-shadow)}
 
-/* ---------- modals ---------- */
+/* ---------- modals (dark chrome) ---------- */
 .modal{background:linear-gradient(165deg,#0d1322,#080b14);border:1px solid var(--line)}
-.modal h3{color:var(--ink)}
+.modal h3{color:#eaf0fb}
 .note{background:rgba(255,255,255,.04);border:1px solid var(--line);color:var(--muted)}
 .field input,.field select{background:rgba(255,255,255,.04);border:1px solid var(--line);color:var(--ink)}
-.field input:focus,.field select:focus{outline:none;border-color:var(--sky);box-shadow:0 0 0 3px rgba(56,189,248,.18)}
+.field input:focus,.field select:focus{outline:none;border-color:var(--accent-2);box-shadow:0 0 0 3px rgba(25,184,166,.18)}
+.field label{color:var(--muted)}
 .mbtn{border:1px solid var(--line);color:var(--ink)}
-.mbtn.primary{background:var(--grad);border:none;color:#05070d;font-weight:700}
+.mbtn.primary{background:var(--accent-2);border:none;color:#042a25;font-weight:700}
 .mbtn.subtle{background:rgba(255,255,255,.05);color:var(--ink)}
 .mbtn.subtle:hover{background:rgba(255,255,255,.09)}
 .mbtn.danger{background:rgba(251,113,133,.12);border-color:rgba(251,113,133,.4);color:#fda4af}
 .lvl{background:rgba(255,255,255,.04);border:1px solid var(--line)}
 .lvl .ctrls button{background:rgba(255,255,255,.05);border:1px solid var(--line);color:var(--ink)}
-.lvl .ctrls button:hover{background:rgba(94,234,212,.12)}
+.lvl .ctrls button:hover{background:rgba(25,184,166,.12)}
 .addlvl select{background:rgba(255,255,255,.04);border:1px solid var(--line);color:var(--ink)}
 
-/* ---------- change-log / comparison tables ---------- */
+/* ---------- change-log / comparison tables (dark chrome) ---------- */
 .lg-wrap{background:rgba(255,255,255,.02);border:1px solid var(--line)}
-table.lg th{background:rgba(94,234,212,.10);color:var(--teal)}
+table.lg th{background:rgba(25,184,166,.10);color:#7fd9c8}
 table.lg td{border-top:1px solid var(--line)}
 table.lg tbody tr:hover{background:rgba(255,255,255,.03)}
 .lg-id,.lg-t{color:var(--muted-dk)}
-.cmp-total td{border-top:2px solid var(--teal);background:rgba(94,234,212,.10)}
+.cmp-h{color:#eaf0fb}
+.cmp-total td{border-top:2px solid var(--accent-2);background:rgba(25,184,166,.10)}
 
 /* ---------- toast ---------- */
 #toast{background:#0c1322;border:1px solid var(--line);color:var(--ink)}
-#toast .dot{background:var(--teal)}
+#toast .dot{background:var(--accent-2)}
