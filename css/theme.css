@@ -104,23 +104,25 @@ header{background:rgba(7,11,20,0.72)!important;backdrop-filter:blur(14px);
    ===================================================================== */
 .node,.box,.ecard,.trow,.tperson,.bl-chart .pnode{
   --card:#ffffff;
-  --ink:#16203a;
-  --muted:#5b6a82;
-  --muted-dk:#8893a6;
-  --line:rgba(22,33,58,0.12);
-  --line-dk:rgba(22,33,58,0.10);
-  --gold:#0f766e; --gold-2:#0c5e57; --gold-soft:rgba(15,118,110,0.10);
-  --green:#0f766e; --green-2:#16203a; --green-soft:rgba(15,118,110,0.08);
-  --conn:rgba(22,33,58,0.18);
-  color:#16203a;
+  --ink:#0f1726;
+  --muted:#39455d;
+  --muted-dk:#566276;
+  --line:rgba(20,30,52,0.16);
+  --line-dk:rgba(20,30,52,0.12);
+  --gold:#0c6259; --gold-2:#0a564e; --gold-soft:rgba(15,118,110,0.12);
+  --green:#0c6259; --green-2:#0f1726; --green-soft:rgba(15,118,110,0.10);
+  --conn:rgba(20,30,52,0.2);
+  color:#0f1726;
 }
 
-/* nodes / apex / lineage */
-.node{background:linear-gradient(180deg,#ffffff,#eef1f7);border:1px solid var(--line);box-shadow:var(--card-shadow);
-  backdrop-filter:none;-webkit-backdrop-filter:none}
-.node.apex{background:linear-gradient(180deg,#ffffff,#e9eef6);border:1px solid var(--line);border-top:3px solid var(--accent);
+/* nodes / apex / lineage — light cards at ~45% so the night sky shows through */
+.node{background:linear-gradient(180deg,rgba(247,249,252,0.5),rgba(228,234,243,0.42));
+  border:1px solid rgba(255,255,255,0.14);box-shadow:var(--card-shadow);
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.node.apex{background:linear-gradient(180deg,rgba(247,249,252,0.58),rgba(226,233,243,0.5));
+  border:1px solid rgba(255,255,255,0.18);border-top:3px solid var(--accent);
   box-shadow:0 4px 12px rgba(0,0,0,.32),0 24px 64px rgba(0,0,0,.5)}
-.node.lineage.current{border:1px solid var(--accent);background:linear-gradient(180deg,#ffffff,#eaf3f1)}
+.node.lineage.current{border:1px solid var(--accent);background:linear-gradient(180deg,rgba(247,249,252,0.52),rgba(226,240,238,0.45))}
 .node .role-eyebrow{color:var(--accent)}
 .node .nm{color:var(--ink)}
 .node .hc{color:#46546d;background:#eaeef5;border:1px solid var(--line)}
@@ -132,7 +134,8 @@ header{background:rgba(7,11,20,0.72)!important;backdrop-filter:blur(14px);
 .m-net,.ec-sal .ecp b.m-net,.bl-chart .pn-pay .m-net{color:#8a5a2b}
 
 /* group boxes */
-.box{background:linear-gradient(180deg,#ffffff,#eef1f7);border:1px solid var(--line);box-shadow:var(--card-shadow)}
+.box{background:linear-gradient(180deg,rgba(247,249,252,0.5),rgba(228,234,243,0.42));border:1px solid rgba(255,255,255,0.14);
+  box-shadow:var(--card-shadow);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
 .box .bname{color:var(--ink)}
 .box .blead-nm span{color:var(--accent)}
 .box .blead-nm b,.box .lead b{color:var(--ink)}
@@ -144,7 +147,8 @@ header{background:rgba(7,11,20,0.72)!important;backdrop-filter:blur(14px);
 @keyframes bflash{0%{background:#e9f3f1;border-color:var(--accent)}100%{background:#fff;border-color:var(--line)}}
 
 /* employee cards */
-.ecard{background:linear-gradient(180deg,#ffffff,#eef1f7);border:1px solid var(--line);box-shadow:var(--card-shadow)}
+.ecard{background:linear-gradient(180deg,rgba(247,249,252,0.5),rgba(228,234,243,0.42));border:1px solid rgba(255,255,255,0.14);
+  box-shadow:var(--card-shadow);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
 .ecard.lead{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent-soft),var(--card-shadow)}
 .ec-id{color:var(--muted-dk)}
 .ec-name{color:var(--ink)}
@@ -175,14 +179,15 @@ header{background:rgba(7,11,20,0.72)!important;backdrop-filter:blur(14px);
 .tbtn{background:rgba(255,255,255,.05);border:1px solid var(--line);color:var(--ink)}
 .tbtn:hover{border-color:var(--accent-2)}
 .tbtn.primary{background:var(--accent-2);border:none;color:#042a25}
-.trow{background:#fff;border:1px solid var(--line);box-shadow:0 1px 3px rgba(0,0,0,.22)}
-.trow.open{background:#f1f6f5;border-color:var(--accent)}
+.trow{background:rgba(247,249,252,0.5);border:1px solid rgba(255,255,255,0.12);box-shadow:0 1px 3px rgba(0,0,0,.22);
+  backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.trow.open{background:rgba(232,244,242,0.55);border-color:var(--accent)}
 .tcaret{color:var(--accent)}
 .tname{color:var(--ink)}
 .tcount{background:#eef1f6;border:1px solid var(--line);color:var(--muted)}
 .tlead{color:var(--muted)}
 .tlead b{color:var(--ink)}
-.tperson{background:#fff;border:1px solid var(--line)}
+.tperson{background:rgba(247,249,252,0.46);border:1px solid rgba(255,255,255,0.12)}
 .tperson.lead{border-color:var(--accent)}
 .tpname{color:var(--ink)}
 .tppos{color:var(--muted)}
@@ -191,7 +196,7 @@ header{background:rgba(7,11,20,0.72)!important;backdrop-filter:blur(14px);
 /* ---------- baseline (As-is) chart ---------- */
 .bl-chart{background:rgba(5,7,13,.45);border:1px solid var(--line)}
 .bl-title{color:#eaf0fb}
-.bl-chart .pnode{background:linear-gradient(180deg,#ffffff,#eef1f7);border:1px solid var(--line);box-shadow:var(--card-shadow)}
+.bl-chart .pnode{background:rgba(240,243,249,0.46);border:1px solid rgba(255,255,255,0.12);box-shadow:var(--card-shadow)}
 .bl-chart .pnode.lead{border-color:var(--accent)}
 .bl-chart .pn-name{color:var(--ink)}
 .bl-chart .pn-pos{color:var(--muted)}
@@ -202,7 +207,12 @@ header{background:rgba(7,11,20,0.72)!important;backdrop-filter:blur(14px);
 .modal{background:linear-gradient(165deg,#0d1322,#080b14);border:1px solid var(--line)}
 .modal h3{color:#eaf0fb}
 .note{background:rgba(255,255,255,.04);border:1px solid var(--line);color:var(--muted)}
-.field input,.field select{background:rgba(255,255,255,.04);border:1px solid var(--line);color:var(--ink)}
+.field input{background:rgba(255,255,255,.04);border:1px solid var(--line);color:var(--ink)}
+/* selects + their native dropdown lists need a SOLID dark bg or the options
+   render on a transparent panel and become unreadable */
+.field select,.field .combo select{background:#0a0e16;border:1px solid var(--line);color:#fff}
+.field select option,.field select optgroup,
+.field .combo select option,.field .combo select optgroup{background:#0a0e16;color:#fff}
 .field input:focus,.field select:focus{outline:none;border-color:var(--accent-2);box-shadow:0 0 0 3px rgba(25,184,166,.18)}
 .field label{color:var(--muted)}
 .mbtn{border:1px solid var(--line);color:var(--ink)}
