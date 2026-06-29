@@ -56,17 +56,16 @@ body{background:transparent;color:var(--ink)}
 @keyframes flo1{0%,100%{transform:translate(0,0)}50%{transform:translate(60px,40px)}}
 @keyframes flo2{0%,100%{transform:translate(0,0)}50%{transform:translate(-50px,60px)}}
 
-/* Imarat skyline + the single light streak running the rooflines */
+/* Imarat skyline + a wave of building windows lighting up left → right */
 .bg-skyline{
   position:fixed;left:0;right:0;bottom:0;width:100%;height:auto;z-index:-3;pointer-events:none;
   -webkit-mask-image:linear-gradient(to top,#000 86%,transparent 100%);
   mask-image:linear-gradient(to top,#000 86%,transparent 100%);
 }
 .bg-skyline .sky-photo{opacity:.26;filter:brightness(.78) saturate(1.02) contrast(1.04)}
-.bg-skyline .streak{fill:none;stroke:#2bffe6;stroke-linecap:round;stroke-linejoin:round;filter:url(#sky-glow)}
-.bg-skyline .streak-tail{stroke-width:5;opacity:.14;stroke-dasharray:150 1000}
-.bg-skyline .streak-mid{stroke-width:3.4;opacity:.38;stroke-dasharray:84 1000}
-.bg-skyline .streak-core{stroke-width:2.4;opacity:.95;stroke-dasharray:34 1000}
+/* VFX: building windows light up in a wave that travels left → right */
+.bg-skyline .sky-win-base{opacity:.05}                       /* faint always-on windows */
+.bg-skyline .sky-win-wave{opacity:.85;mix-blend-mode:screen} /* the travelling lit wave */
 @media(prefers-reduced-motion:reduce){.aurora{animation:none!important}}
 
 /* ---------- chrome: header / sidebar / breadcrumb (stay dark) ---------- */
