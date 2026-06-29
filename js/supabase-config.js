@@ -6,8 +6,8 @@
    hiding this key. Leave the placeholders to keep the app fully offline/static.
    ===================================================================== */
 window.SUPABASE_CONFIG = {
-  url:     "YOUR_SUPABASE_URL",       // e.g. https://abcd1234efgh.supabase.co
-  anonKey: "YOUR_SUPABASE_ANON_KEY",  // Settings → API → Project API keys → anon public
+  url:     "https://copyyjljpfijssdecycv.supabase.co",
+  anonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNvcHl5amxqcGZpanNzZGVjeWN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI1NTMyMTcsImV4cCI6MjA5ODEyOTIxN30.jc4LS9PiTRU5PmXzQCQUAlioEu4w6akaN--MwZZKvrg",
   table:   "organogram",              // table created by supabase/setup.sql
   rowId:   1                          // the single row that holds the whole org
 };
