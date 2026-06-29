@@ -1,3 +1,7 @@
+const db = supabase.createClient(
+  'https://copyyjljpfijssdecycv.supabase.co',   // your Project URL
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNvcHl5amxqcGZpanNzZGVjeWN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI1NTMyMTcsImV4cCI6MjA5ODEyOTIxN30.jc4LS9PiTRU5PmXzQCQUAlioEu4w6akaN--MwZZKvrg'                       // your anon/public key
+);
 /* =====================================================================
    Evoke Organogram — configuration
    Edit this file to change branding, the drill hierarchy, and behaviour.
