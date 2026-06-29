@@ -557,6 +557,17 @@
     $$("[data-edit]").forEach(btn=>btn.onclick=()=>openEditor(+btn.dataset.edit));
   }
 
+  /* jump the chart to a person's leaf and flash their card, so a moved person
+     is never "lost" — the view follows them to their new home. */
+  function focusPerson(e){
+    if(viewMode==="tree") setView("drill");
+    setChartExpanded(false);
+    path = hierarchy.map(k=>({field:k,value:val(e,k)}));
+    render(); $(".stage").scrollTop=0;
+    setTimeout(()=>{ const card=document.querySelector(`.ecard[data-id="${e._id}"]`);
+      if(card){ card.scrollIntoView({block:"center",behavior:"smooth"}); card.classList.remove("hl"); void card.offsetWidth; card.classList.add("hl"); } },70);
+  }
+
   /* ---- move: transfer a person to a COMPLETE existing node ----
      Sets every field along targetPath, then fills any deeper level with a real
      existing child so we never create an orphan combo (e.g. Vision Office › SAP).
@@ -578,9 +589,7 @@
     editCount++; logChange("Move", e, changes); saveDraft();
     const dest=hierarchy.map(f=>val(e,f)).filter(v=>v&&v!=="—").join(" › ");
     toast(`${e.name} → ${dest}`, changes.map(c=>fieldLabel(c.field)+": "+c.from+" → "+c.to).join("; "));
-    render();
-    const bx=document.querySelector(`.box[data-name="${cssEsc(targetPath[targetPath.length-1].value)}"]`);
-    if(bx){bx.classList.remove("flash");void bx.offsetWidth;bx.classList.add("flash");}
+    focusPerson(e);   // follow the person to their new home so they're never lost
   }
 
   /* ---- single-person move: pick a destination, then apply scope ---- */
@@ -654,17 +663,24 @@
     const target=$("#gm-target").value; const topField=hierarchy[0];
     if(!target){ ov.classList.remove("show"); return; }
     const {people}=groupPeople(field,name,skipped);
+    if(!people.length){ ov.classList.remove("show"); return; }
+    const single=people.length===1;
+    const who = single ? val(people[0],"name") : `${name} (${people.length} people)`;
+    const noun = single ? "person" : "people";
     if(mode==="copy"){
       let nextId=EMP.reduce((m,e)=>Math.max(m,e._id),-1);
       people.forEach(src=>{ const {_id,...r}=src; r[topField]=target; EMP.push({...r,_id:++nextId}); });
-      logChange("Copy", {emp_no:"—",name:`${name} (${people.length})`}, [{field:fieldLabel(field),from:name,to:target+" › "+name}]);
-      toast(`Copied ${people.length} people of ${name} → ${target}`);
+      logChange("Copy", {emp_no:single?val(people[0],"emp_no"):"—",name:who}, [{field:fieldLabel(field),from:name,to:target+" › "+name}]);
+      toast(`Copied ${who} → ${target}`);
     } else {
       people.forEach(e=>{ e[topField]=target; });
-      logChange("Move", {emp_no:"—",name:`${name} (${people.length})`}, [{field:fieldLabel(topField),from:"(group)",to:target}]);
-      toast(`Moved ${people.length} people of ${name} → ${target}`);
+      logChange("Move", {emp_no:single?val(people[0],"emp_no"):"—",name:who}, [{field:fieldLabel(topField),from:name,to:target}]);
+      toast(`Moved ${who} → ${target}`);
     }
-    editCount++; ov.classList.remove("show"); saveDraft(); render();
+    editCount++; ov.classList.remove("show"); saveDraft();
+    // follow a moved single person to their new home; otherwise focus the target
+    if(mode!=="copy" && single){ focusPerson(people[0]); }
+    else { path=[{field:topField,value:target}]; render(); $(".stage").scrollTop=0; }
   }
   /* ---- delete a whole group (department / section) ---- */
   async function deleteGroup(field, name, skipped){
