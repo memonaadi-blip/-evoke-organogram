@@ -234,6 +234,11 @@ table.lg tbody tr:hover{background:rgba(255,255,255,.03)}
 .cmp-h{color:#eaf0fb}
 .cmp-total td{border-top:2px solid var(--accent-2);background:rgba(25,184,166,.10)}
 
+/* ---------- sign-in form ---------- */
+.form-msg{min-height:18px;font-size:var(--fs-sm);color:#fda4af;margin:2px 0 4px}
+#cloud-auth{border-color:rgba(25,184,166,.4)}
+body.signed-in #cloud-auth{background:rgba(25,184,166,.14);border-color:var(--accent-2);color:#bdeee6}
+
 /* ---------- toast ---------- */
 #toast{background:#0c1322;border:1px solid var(--line);color:var(--ink)}
 #toast .dot{background:var(--accent-2)}

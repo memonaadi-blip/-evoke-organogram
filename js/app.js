@@ -12,10 +12,16 @@
   const $ = (s) => document.querySelector(s);
   const $$ = (s) => Array.prototype.slice.call(document.querySelectorAll(s));
 
-  /* ---- editing gate: read-only unless allowed AND (editByDefault or ?edit=1) ---- */
+  /* ---- editing gate: read-only unless allowed AND (editByDefault or ?edit=1) ----
+     When Supabase is configured (cloud mode), editing additionally requires a
+     login: EDIT starts false and cloud.js flips it on via ORG.setEditAllowed()
+     after a successful sign-in. Without Supabase, behaviour is unchanged. */
   const params = new URLSearchParams(location.search);
   const wantsEdit = params.get("edit") === "1" || params.get("edit") === "true";
-  const EDIT = !!CFG.allowEditing && (!!CFG.editByDefault || wantsEdit);
+  const SC = window.SUPABASE_CONFIG;
+  const CLOUD = !!(SC && /^https?:\/\//.test(SC.url || "") && (SC.anonKey || "").length > 20);
+  const wantEdit = !!CFG.allowEditing && (!!CFG.editByDefault || wantsEdit);
+  let EDIT = CLOUD ? false : wantEdit;
   if (!EDIT) document.body.classList.add("readonly");
 
   /* ---- state ---- */
@@ -989,6 +995,29 @@
     toast("Exported config.js","Replace js/config.js and commit");
   }
 
+  /* ---- bind editing chrome (idempotent; safe to call after a cloud login) ---- */
+  let editBound=false;
+  function bindEdit(){
+    if(editBound) return; editBound=true;
+    $("#add-btn").onclick=()=>openEditor(null);
+    $("#settings-btn").onclick=openSettings;
+    $("#emp-save").onclick=saveEditor;
+    $("#emp-delete").onclick=deleteEditor;
+    const gmv=$("#gm-move"); if(gmv) gmv.onclick=()=>doGroupMove("move");
+    const gcp=$("#gm-copy"); if(gcp) gcp.onclick=()=>doGroupMove("copy");
+    const mvf=$("#mv-full"); if(mvf) mvf.onclick=()=>doPersonMove("full");
+    const mvd=$("#mv-dept"); if(mvd) mvd.onclick=()=>doPersonMove("dept");
+    const cb=$("#changes-btn"); if(cb) cb.onclick=openLog;
+    const cmpb=$("#compare-btn"); if(cmpb) cmpb.onclick=openCompare;
+    const cmpx=$("#cmp-export"); if(cmpx) cmpx.onclick=exportCompare;
+    const lx=$("#log-export"); if(lx) lx.onclick=exportLog;
+    const lc=$("#log-clear"); if(lc) lc.onclick=()=>{
+      if(!changeLog.length||!confirm("Clear the entire change log?"))return;
+      changeLog=[]; saveDraft(); updateChangesBadge(); renderLog(); toast("Change log cleared");
+    };
+    updateChangesBadge();
+  }
+
   /* ---- bind chrome ---- */
   function bind(){
     // export menu
@@ -1014,26 +1043,8 @@
     // Chart view: blow open / collapse every branch at once
     const ce=$("#chart-expand");
     if(ce) ce.onclick=()=>{ if(viewMode!=="drill") setView("drill"); setChartExpanded(!chartExpanded); render(); $(".stage").scrollTop=0; $(".stage").scrollLeft=0; };
-    // editor modal + change log
-    if(EDIT){
-      $("#add-btn").onclick=()=>openEditor(null);
-      $("#settings-btn").onclick=openSettings;
-      $("#emp-save").onclick=saveEditor;
-      $("#emp-delete").onclick=deleteEditor;
-      const gmv=$("#gm-move"); if(gmv) gmv.onclick=()=>doGroupMove("move");
-      const gcp=$("#gm-copy"); if(gcp) gcp.onclick=()=>doGroupMove("copy");
-      const mvf=$("#mv-full"); if(mvf) mvf.onclick=()=>doPersonMove("full");
-      const mvd=$("#mv-dept"); if(mvd) mvd.onclick=()=>doPersonMove("dept");
-      const cb=$("#changes-btn"); if(cb) cb.onclick=openLog;
-      const cmpb=$("#compare-btn"); if(cmpb) cmpb.onclick=openCompare;
-      const cmpx=$("#cmp-export"); if(cmpx) cmpx.onclick=exportCompare;
-      const lx=$("#log-export"); if(lx) lx.onclick=exportLog;
-      const lc=$("#log-clear"); if(lc) lc.onclick=()=>{
-        if(!changeLog.length||!confirm("Clear the entire change log?"))return;
-        changeLog=[]; saveDraft(); updateChangesBadge(); renderLog(); toast("Change log cleared");
-      };
-      updateChangesBadge();
-    }
+    // editor modal + change log (may be (re)bound after a cloud login)
+    if(EDIT) bindEdit();
     $$("[data-close]").forEach(x=>x.onclick=()=>$$(".overlay").forEach(o=>o.classList.remove("show")));
     $$(".overlay").forEach(o=>o.onclick=(e)=>{ if(e.target===o) o.classList.remove("show"); });
     document.addEventListener("keydown",e=>{ if(e.key==="Escape"){$$(".overlay").forEach(o=>o.classList.remove("show"));results.classList.remove("show");} });
@@ -1045,6 +1056,44 @@
     $("#toast-msg").innerHTML=esc(m)+(sub?` <span style="color:var(--muted-dk)">· ${esc(sub)}</span>`:"");
     const t=$("#toast"); t.classList.add("show"); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove("show"),2600);
   }
+
+  /* ---- public API for the optional cloud layer (js/cloud.js) ----
+     Lets Supabase load data in, unlock editing after login, and read the
+     working set out to publish. No-op surface when cloud isn't configured. */
+  function setEditAllowed(on){
+    if(on && !EDIT){
+      EDIT=true; document.body.classList.remove("readonly");
+      // now that we can edit, pick up any local draft + change log
+      try{ const d=localStorage.getItem(LS_KEY); if(d){ const a=JSON.parse(d); if(Array.isArray(a)&&a.length) EMP=reindex(a); } }catch(e){}
+      try{ const l=localStorage.getItem(LS_LOG); if(l){ const a=JSON.parse(l); if(Array.isArray(a)) changeLog=a; } }catch(e){}
+      bindEdit(); render(); refreshBanner();
+    }else if(!on && EDIT){
+      EDIT=false; document.body.classList.add("readonly"); render();
+    }
+  }
+  /* Replace the published baseline (and the working set, unless there are
+     unsaved local edits) with data loaded from the cloud. */
+  function applyData(emps, cfg, opts){
+    opts=opts||{};
+    const wasDirty = dirty();
+    if(cfg && Array.isArray(cfg.hierarchy)) hierarchy=cfg.hierarchy.slice();
+    if(Array.isArray(emps)){
+      RAW.length=0; emps.forEach(r=>RAW.push(r));      // cloud is now the baseline
+      committedSnapshot = JSON.stringify(emps);
+      if(opts.force || !wasDirty) EMP=reindex(emps);   // don't clobber unsaved edits
+    }
+    path=[]; stats(); render(); refreshBanner();
+  }
+  window.ORG = {
+    cloud: CLOUD,
+    wantsEdit: wantEdit,
+    setEditAllowed, applyData,
+    isDirty: ()=>dirty(),
+    currentData: ()=>strip(EMP),
+    currentConfig: ()=>({...CFG, hierarchy:hierarchy.slice()}),
+    markSaved: ()=>{ committedSnapshot=serialize(EMP); try{localStorage.removeItem(LS_KEY);}catch(e){} refreshBanner(); },
+    toast: (m,sub)=>toast(m,sub)
+  };
 
   /* ---- go ---- */
   init(); bind(); render(); refreshBanner();

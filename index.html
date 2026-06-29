@@ -9,8 +9,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;450;500;600&display=swap" rel="stylesheet">
 <!-- Bump ?v= when you change styles/code so browsers reload instead of using a cached copy. -->
-<link rel="stylesheet" href="css/styles.css?v=2026-06-26l">
-<link rel="stylesheet" href="css/theme.css?v=2026-06-26l">
+<link rel="stylesheet" href="css/styles.css?v=2026-06-26m">
+<link rel="stylesheet" href="css/theme.css?v=2026-06-26m">
 </head>
 <body>
 
@@ -70,6 +70,7 @@
     <button class="btn edit-only" id="compare-btn">⇆ As-is/To-be</button>
     <button class="btn edit-only" id="add-btn">＋ Add</button>
     <button class="btn edit-only" id="settings-btn">⚙ Hierarchy</button>
+    <button class="btn" id="cloud-auth" style="display:none">Sign in to edit</button>
     <div class="menu">
       <button class="btn gold" id="export-btn">⤓ Export ▾</button>
       <div class="menu-pop" id="export-pop">
@@ -202,12 +203,35 @@
   </div>
 </div>
 
+<!-- Sign-in (cloud editing). Only used when Supabase is configured. -->
+<div class="overlay" id="login-overlay">
+  <div class="modal" style="width:min(420px,100%)">
+    <div class="modal-head"><h3>Sign in to edit</h3><button class="modal-x" data-close>×</button></div>
+    <form id="login-form" class="modal-body" autocomplete="on">
+      <p class="note" style="margin-top:0">Viewing is open to everyone. Sign in with your admin account to edit and publish changes.</p>
+      <div class="field"><label for="login-email">Email</label><input id="login-email" type="email" required autocomplete="username"></div>
+      <div class="field"><label for="login-pass">Password</label><input id="login-pass" type="password" required autocomplete="current-password"></div>
+      <div id="login-msg" class="form-msg" role="status" aria-live="polite"></div>
+      <div class="modal-foot" style="padding:6px 0 0">
+        <span class="sp"></span>
+        <button type="button" class="mbtn subtle" data-close>Cancel</button>
+        <button type="submit" class="mbtn primary">Sign in</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <div id="toast"><span class="dot"></span><span id="toast-msg"></span></div>
 
 <!-- data first, then config, then app -->
+<!-- Supabase client (CDN, no build step). Harmless if offline; the cloud layer
+     stays inert until js/supabase-config.js is filled in. -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase-config.js?v=2026-06-26m"></script>
 <script src="data/employees.js"></script>
-<script src="js/config.js?v=2026-06-26l"></script>
-<script src="js/app.js?v=2026-06-26l"></script>
-<script src="js/theme.js?v=2026-06-26l"></script>
+<script src="js/config.js?v=2026-06-26m"></script>
+<script src="js/app.js?v=2026-06-26m"></script>
+<script src="js/theme.js?v=2026-06-26m"></script>
+<script src="js/cloud.js?v=2026-06-26m"></script>
 </body>
 </html>
