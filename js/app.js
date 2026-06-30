@@ -7,8 +7,8 @@
 
   const CFG = window.ORG_CONFIG || {};
   const RAW = (window.EVOKE_DATA || []).slice();
-  const LS_KEY = "evoke_org_draft_v1";
-  const LS_LOG = "evoke_org_log_v1";
+  const LS_KEY = "evoke_org_draft_v2";   // v2: drop stale pre-June-payroll drafts
+  const LS_LOG = "evoke_org_log_v2";
   const $ = (s) => document.querySelector(s);
   const $$ = (s) => Array.prototype.slice.call(document.querySelectorAll(s));
 
