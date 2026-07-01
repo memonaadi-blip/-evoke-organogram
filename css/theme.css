@@ -238,6 +238,13 @@ table.lg tbody tr:hover{background:rgba(255,255,255,.03)}
 #cloud-auth{border-color:rgba(25,184,166,.4)}
 body.signed-in #cloud-auth{background:rgba(25,184,166,.14);border-color:var(--accent-2);color:#bdeee6}
 
+/* ---------- flag: employees not in the June payroll workbook ---------- */
+.ecard.absent{border-color:rgba(244,63,94,.65)}
+.ecard.absent:hover{border-color:rgba(244,63,94,.85)}
+.bl-chart .pnode.absent{border-color:rgba(244,63,94,.6)}
+.absent-flag{display:inline-block;font-size:9px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
+  color:#fff;background:#e11d48;border-radius:6px;padding:2px 7px;white-space:nowrap}
+
 /* ---------- toast ---------- */
 #toast{background:#0c1322;border:1px solid var(--line);color:var(--ink)}
 #toast .dot{background:var(--accent-2)}

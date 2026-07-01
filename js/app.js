@@ -138,6 +138,8 @@
     try{ localStorage.setItem(LS_KEY, JSON.stringify(strip(EMP))); }catch(e){}
     try{ localStorage.setItem(LS_LOG, JSON.stringify(changeLog)); }catch(e){}
     refreshBanner();
+    // let the cloud layer auto-publish this edit so other browsers get it live
+    if(window.ORG && typeof window.ORG.onEdit==="function"){ try{ window.ORG.onEdit(); }catch(e){} }
   }
 
   /* ---- change log: record every movement / edit (as-is → to-be) ---- */
@@ -338,7 +340,7 @@
       actions=`<div class="ec-actions edit-only">${move}${leadBtn}<button class="ic" data-edit="${e._id}" title="Edit">✎</button></div>`;
     }
     const ten = tenure(e.doj);
-    return `<div class="ecard${isLead?" lead":""}${drag?" draggable":""}"${drag?' draggable="true"':""} data-id="${e._id}">
+    return `<div class="ecard${isLead?" lead":""}${e.absent?" absent":""}${drag?" draggable":""}"${drag?' draggable="true"':""} data-id="${e._id}">
       <span class="ec-id">#${esc(val(e,"emp_no"))}</span>
       <div class="top">
         <div class="av" style="background:${color(val(e,hierarchy[0]||"department"),42,55)}">${esc(initials(val(e,"name")))}</div>
@@ -347,7 +349,7 @@
           <div class="ec-pos">${esc(val(e,"position"))}${isLead?'<span class="leadtag">Lead</span>':""}</div>
         </div>
       </div>
-      <div class="ec-meta">${chips}</div>
+      <div class="ec-meta">${e.absent?'<span class="absent-flag" title="Not in the June 2026 payroll workbook">Not in June payroll</span>':""}${chips}</div>
       ${ROLLUPS.length?`<div class="ec-pay">
         <div class="ec-join">Joined <b>${esc(fmtDate(e.doj))}</b>${ten?` · <span class="ten">${esc(ten)} tenure</span>`:""}</div>
         <div class="ec-sal">
@@ -830,7 +832,7 @@
   const blKey=(p)=>p.map(x=>x.field+"="+x.value).join("|");
   /* a compact person node for the expanded baseline chart (the leaves) */
   function blPerson(e,isLead){
-    return `<div class="pnode${isLead?" lead":""}">
+    return `<div class="pnode${isLead?" lead":""}${e.absent?" absent":""}">
       <div class="pn-top">
         <span class="pn-av" style="background:${color(val(e,hierarchy[0]||"department"),42,55)}">${esc(initials(val(e,"name")))}</span>
         <span class="pn-id">#${esc(val(e,"emp_no"))}</span>
@@ -1092,7 +1094,8 @@
     currentData: ()=>strip(EMP),
     currentConfig: ()=>({...CFG, hierarchy:hierarchy.slice()}),
     markSaved: ()=>{ committedSnapshot=serialize(EMP); try{localStorage.removeItem(LS_KEY);}catch(e){} refreshBanner(); },
-    toast: (m,sub)=>toast(m,sub)
+    toast: (m,sub)=>toast(m,sub),
+    onEdit: null   // cloud.js sets this to auto-publish edits (debounced)
   };
 
   /* ---- go ---- */

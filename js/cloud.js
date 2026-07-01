@@ -54,9 +54,9 @@
   }
 
   /* ---- 4.6  publish the working set back to the cloud ---- */
-  async function publish() {
-    if (!session) { openLogin(); return; }
-    toast("Publishing…");
+  async function publish(silent) {
+    if (!session) { if(!silent) openLogin(); return; }
+    if (!silent) toast("Publishing…");
     var payload = {
       id: ROW,
       employees: ORG.currentData(),
@@ -64,10 +64,14 @@
       updated_at: new Date().toISOString()
     };
     var res = await db.from(TABLE).upsert(payload, { onConflict: "id" });
-    if (res.error) { toast("Publish failed", res.error.message); return; }
+    if (res.error) { if(silent) console.warn("[cloud] auto-sync failed:", res.error.message); else toast("Publish failed", res.error.message); return; }
     ORG.markSaved && ORG.markSaved();
-    toast("Published to the cloud", "everyone sees it now");
+    toast(silent ? "Synced to cloud" : "Published to the cloud", silent ? "" : "everyone sees it now");
   }
+  // auto-publish: every authorised edit syncs to the cloud (debounced) so other
+  // browsers get it live via the realtime subscription
+  var autoT;
+  function autoPublish(){ clearTimeout(autoT); autoT=setTimeout(function(){ publish(true); }, 1500); }
 
   /* ---- 4.5  auth gate ---- */
   function openLogin() { var o = document.getElementById("login-overlay"); if (o) o.classList.add("show"); }
@@ -84,11 +88,13 @@
     }
     // unlock / relock editing
     if (ORG.setEditAllowed) ORG.setEditAllowed(signedIn && ORG.wantsEdit);
-    // the "unsaved edits" banner button publishes to the cloud when signed in
+    // authorised edits auto-sync to the cloud so viewers update live
+    ORG.onEdit = signedIn ? autoPublish : null;
+    // the "unsaved edits" banner button also publishes on demand when signed in
     var be = document.getElementById("banner-export");
     if (be) {
       be.textContent = signedIn ? "Publish to cloud" : "Export employees.js";
-      be.onclick = signedIn ? publish : be.onclick;   // keep the file-export fallback when signed out
+      be.onclick = signedIn ? function(){ publish(false); } : be.onclick;   // keep the file-export fallback when signed out
     }
   }
 
