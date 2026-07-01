@@ -71,6 +71,13 @@ body{background:transparent;color:var(--ink)}
 /* ---------- chrome: header / sidebar / breadcrumb (stay dark) ---------- */
 header{background:rgba(7,11,20,0.72)!important;backdrop-filter:blur(14px);
   -webkit-backdrop-filter:blur(14px);border-bottom:1px solid var(--line);box-shadow:0 1px 0 rgba(255,255,255,.03)}
+/* keep the brand + subtitle + "View only" badge from overflowing into the
+   employee/department stats when the header gets tight */
+header .brand{min-width:0;flex:0 1 auto;overflow:hidden}
+header .brand h1{flex:none}
+header .brand .tag{overflow:hidden;text-overflow:ellipsis;min-width:0}
+header .hstats{flex:none}
+@media(max-width:1200px){ header .brand .tag{display:none} }   /* drop subtitle before it crowds the stats */
 .btn.gold{background:var(--accent-2);border:none;color:#042a25;font-weight:700}
 .btn.gold:hover{filter:brightness(1.08)}
 .viewseg button.active{background:var(--accent-2);color:#042a25}

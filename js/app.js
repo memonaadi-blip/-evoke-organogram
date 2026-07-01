@@ -1063,6 +1063,7 @@
      Lets Supabase load data in, unlock editing after login, and read the
      working set out to publish. No-op surface when cloud isn't configured. */
   function setEditAllowed(on){
+    const rb=document.getElementById("ro-badge"); if(rb) rb.style.display = on ? "none" : "";  // hide "View only" once signed in
     if(on && !EDIT){
       EDIT=true; document.body.classList.remove("readonly");
       // now that we can edit, pick up any local draft + change log
