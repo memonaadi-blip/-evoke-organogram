@@ -305,6 +305,7 @@
     return `<div class="box" data-name="${esc(name)}" data-field="${esc(field)}">
       ${acts&&EDIT?`<div class="box-acts edit-only">
         <button class="bx-add" title="Add a person to this ${esc(fieldLabel(field))}">＋</button>
+        <button class="bx-ren" title="Rename this ${esc(fieldLabel(field))}">✎</button>
         <button class="bx-move" title="Move / copy this ${esc(fieldLabel(field))}">↪</button>
         <button class="bx-del" title="Delete this ${esc(fieldLabel(field))}">✕</button>
       </div>`:""}
@@ -491,6 +492,12 @@
     const ah=$("#add-here"); if(!ah) return;
     ah.onclick=()=>{ const pre={}; path.forEach(p=>pre[p.field]=p.value); openEditor(null, pre); };
   }
+  /* group-level header with a contextual "Add <level>" (department/section…) */
+  function groupAddHdr(field){
+    const lbl = fieldLabel(field);
+    const add = EDIT ? `<button class="addhere edit-only" id="add-group" title="Add a new ${esc(lbl.toLowerCase())}">＋ Add ${esc(lbl.toLowerCase())}</button>` : "";
+    return `<div class="grouphdr"><span>${esc(lbl)}s</span><span class="gh-line"></span>${add}</div>`;
+  }
 
   /* ---- main render ---- */
   function render(){
@@ -519,8 +526,9 @@
         const sub = list.filter(e=>val(e,f)===name);
         return groupBox(f,name,ct,leadOf(sub),isLeafParent,sumPay(sub),true);
       });
-      tree.innerHTML = lineageSpine()+`<div class="down"></div>`+childrenRow(boxes);
+      tree.innerHTML = lineageSpine()+`<div class="down"></div>`+groupAddHdr(f)+childrenRow(boxes);
       wireSpine(); wireBoxes(f, plan.skipped); adjustBar();
+      const ag=$("#add-group"); if(ag) ag.onclick=()=>openAddGroup(path.concat(plan.skipped), f);
     } else { // leaf: employees
       const {arr,lead}=peopleSorted(list);
       tree.innerHTML = lineageSpine()+`<div class="down"></div>`+
@@ -549,6 +557,7 @@
       const ad=b.querySelector(".bx-add"); if(ad) ad.onclick=(ev)=>{ev.stopPropagation();
         const gp=path.concat(skipped,[{field,value:name}]); const pre={}; gp.forEach(p=>pre[p.field]=p.value);
         openEditor(null, pre);};
+      const rn=b.querySelector(".bx-ren"); if(rn) rn.onclick=(ev)=>{ev.stopPropagation(); openRename(field,name,skipped);};
       const mv=b.querySelector(".bx-move"); if(mv) mv.onclick=(ev)=>{ev.stopPropagation(); openGroupMove(field,name,skipped);};
       const dl=b.querySelector(".bx-del"); if(dl) dl.onclick=(ev)=>{ev.stopPropagation(); deleteGroup(field,name,skipped);};
     });
@@ -703,6 +712,51 @@
     // step out if we were inside the deleted group
     path=path.filter((p,i)=>!(p.field===field&&p.value===name));
     saveDraft(); render(); toast(`Deleted ${name} (${people.length} people)`);
+  }
+
+  /* ---- name prompt (rename / add group), returns Promise<string|null> ---- */
+  function promptName(title, note, initial, okLabel){
+    return new Promise(res=>{
+      $("#name-title").textContent=title;
+      $("#name-note").innerHTML=note;
+      const inp=$("#name-input"); inp.value=initial||"";
+      $("#name-save").textContent=okLabel||"Save";
+      const ov=$("#name-overlay");
+      const done=(v)=>{ ov.classList.remove("show"); ov._cancel=null; res(v); };
+      $("#name-save").onclick=()=>{ const v=inp.value.trim(); if(v) done(v); };
+      $("#name-cancel").onclick=()=>done(null);
+      inp.onkeydown=(e)=>{ if(e.key==="Enter"){e.preventDefault(); const v=inp.value.trim(); if(v) done(v);} else if(e.key==="Escape") done(null); };
+      ov.classList.add("show"); ov._cancel=()=>done(null);
+      setTimeout(()=>{ inp.focus(); inp.select(); },40);
+    });
+  }
+
+  /* ---- rename a whole department / section (updates all its people) ---- */
+  async function openRename(field, name, skipped){
+    const parent=path.concat(skipped||[]);
+    const cnt=EMP.filter(e=>parent.every(p=>val(e,p.field)===p.value)&&val(e,field)===name).length;
+    const where=parent.map(p=>p.value).join(" › ")||CFG.orgName||"the top";
+    const nn=await promptName(`Rename ${fieldLabel(field)}`,
+      `Under <b>${esc(where)}</b>. Renames this ${esc(fieldLabel(field).toLowerCase())} for all <b>${cnt}</b> ${cnt===1?"person":"people"}.`,
+      name, "Rename");
+    if(!nn || nn===name) return;
+    const people=EMP.filter(e=>parent.every(p=>val(e,p.field)===p.value)&&val(e,field)===name);
+    people.forEach(e=>{ e[field]=nn; });
+    editCount++; logChange("Rename", {emp_no:"—",name:`${nn} (${people.length})`}, [{field:fieldLabel(field),from:name,to:nn}]);
+    path=path.map(p=>(p.field===field && p.value===name)?{field,value:nn}:p);   // keep breadcrumb valid
+    saveDraft(); render(); toast(`Renamed ${name} → ${nn}`);
+  }
+
+  /* ---- add a new department / sub-department (confirms the parent, then adds
+     its first person so the group actually exists) ---- */
+  async function openAddGroup(parentPath, field){
+    const where=parentPath.map(p=>p.value).join(" › ")||CFG.orgName||"the top";
+    const nn=await promptName(`New ${fieldLabel(field)}`,
+      `Adds a new ${esc(fieldLabel(field).toLowerCase())} under <b>${esc(where)}</b>. You'll add its first person next.`,
+      "", "Continue");
+    if(!nn) return;
+    const pre={}; parentPath.forEach(p=>pre[p.field]=p.value); pre[field]=nn;
+    openEditor(null, pre);
   }
 
   /* ---- employee editor / add ---- */

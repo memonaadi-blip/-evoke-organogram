@@ -148,6 +148,7 @@ header .hstats{flex:none}
 .box .go{color:var(--accent)}
 .box-acts button{background:#fff;border:1px solid var(--line);color:#6a7790}
 .box-acts .bx-add:hover{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.box-acts .bx-ren:hover{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
 .box-acts .bx-move:hover{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
 .box-acts .bx-del:hover{background:rgba(180,69,58,.12);border-color:#b4453a;color:#b4453a}
 @keyframes bflash{0%{background:#e9f3f1;border-color:var(--accent)}100%{background:#fff;border-color:var(--line)}}

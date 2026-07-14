@@ -9,8 +9,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;450;500;600&display=swap" rel="stylesheet">
 <!-- Bump ?v= when you change styles/code so browsers reload instead of using a cached copy. -->
-<link rel="stylesheet" href="css/styles.css?v=2026-07-01b">
-<link rel="stylesheet" href="css/theme.css?v=2026-07-01b">
+<link rel="stylesheet" href="css/styles.css?v=2026-07-01c">
+<link rel="stylesheet" href="css/theme.css?v=2026-07-01c">
 </head>
 <body>
 
@@ -227,6 +227,22 @@
   </div>
 </div>
 
+<!-- Rename a department/section, or name a new one -->
+<div class="overlay" id="name-overlay">
+  <div class="modal" style="width:min(440px,100%)">
+    <div class="modal-head"><h3 id="name-title">Rename</h3><button class="modal-x" data-close>×</button></div>
+    <div class="modal-body">
+      <p class="note" id="name-note" style="margin-top:0"></p>
+      <div class="field"><label for="name-input">Name</label><input id="name-input" type="text" autocomplete="off"></div>
+    </div>
+    <div class="modal-foot">
+      <span class="sp"></span>
+      <button class="mbtn subtle" id="name-cancel" data-close>Cancel</button>
+      <button class="mbtn primary" id="name-save">Save</button>
+    </div>
+  </div>
+</div>
+
 <!-- Sign-in (cloud editing). Only used when Supabase is configured. -->
 <div class="overlay" id="login-overlay">
   <div class="modal" style="width:min(420px,100%)">
@@ -251,11 +267,11 @@
 <!-- Supabase client (CDN, no build step). Harmless if offline; the cloud layer
      stays inert until js/supabase-config.js is filled in. -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/supabase-config.js?v=2026-07-01b"></script>
-<script src="data/employees.js?v=2026-07-01b"></script>
-<script src="js/config.js?v=2026-07-01b"></script>
-<script src="js/app.js?v=2026-07-01b"></script>
-<script src="js/theme.js?v=2026-07-01b"></script>
-<script src="js/cloud.js?v=2026-07-01b"></script>
+<script src="js/supabase-config.js?v=2026-07-01c"></script>
+<script src="data/employees.js?v=2026-07-01c"></script>
+<script src="js/config.js?v=2026-07-01c"></script>
+<script src="js/app.js?v=2026-07-01c"></script>
+<script src="js/theme.js?v=2026-07-01c"></script>
+<script src="js/cloud.js?v=2026-07-01c"></script>
 </body>
 </html>
