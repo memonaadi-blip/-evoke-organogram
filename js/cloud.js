@@ -121,7 +121,13 @@
     };
   }
 
-  load();
-  subscribe();
+  if (window.__SEED_FILE) {
+    // seed mode: keep the bundled data/employees.js and let the admin publish it;
+    // don't let the cloud (or realtime) overwrite what we're about to push up.
+    toast("Loaded the latest file", "sign in, then Publish to push it to the cloud");
+  } else {
+    load();
+    subscribe();
+  }
   initAuth();
 })();

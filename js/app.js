@@ -106,10 +106,19 @@
   function strip(arr){return arr.map(({_id,...r})=>r);}
   function serialize(arr){return JSON.stringify(strip(arr));}
 
+  // ?seed=file — one-time load of the bundled data/employees.js OVER whatever is
+  // in the cloud, so an admin can review it and Publish it live. Skips the cloud
+  // fetch (see cloud.js) and force-marks the working set dirty so Publish appears.
+  const SEED_FILE = /[?&]seed=file\b/.test(location.search);
   function init(){
     EMP = reindex(RAW);
     committedSnapshot = serialize(EMP);
-    if (EDIT){
+    if(SEED_FILE){
+      try{ localStorage.removeItem(LS_KEY); localStorage.removeItem(LS_LOG); localStorage.removeItem(LS_CFG); }catch(e){}
+      window.__SEED_FILE = true;              // tell cloud.js not to overwrite the file data
+      committedSnapshot = "";                 // force dirty -> the Publish banner shows once signed in
+    }
+    if (EDIT && !SEED_FILE){
       try{
         const d = localStorage.getItem(LS_KEY);
         if (d){ const arr = JSON.parse(d); if(Array.isArray(arr)&&arr.length){ EMP = reindex(arr); } }

@@ -14,7 +14,7 @@ window.ORG_CONFIG = {
      Each level groups people by a field. The individual employee is always
      the final leaf. Reorder, add, or remove levels here (or in Settings).
      Available fields: department, section, business_area, company, position */
-  hierarchy: ["department", "section"],
+  hierarchy: ["department", "section", "lvl2"],
 
   /* --- field definitions: key = data field, label = what users see --- */
   fields: [
@@ -23,6 +23,7 @@ window.ORG_CONFIG = {
     { key: "position",      label: "Position",      group: true  },
     { key: "department",    label: "Department",    group: true  },
     { key: "section",       label: "Section",       group: true  },
+    { key: "lvl2",          label: "Sub-section",   group: true  },
     { key: "business_area", label: "Business Area", group: true  },
     { key: "company",       label: "Company",       group: true  },
     { key: "doj",           label: "Date of Joining", group: false },

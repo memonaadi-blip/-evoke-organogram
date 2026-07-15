@@ -1,0 +1,137 @@
+# Data reconciliation — Evoke Jun26.xlsx  (2026-07-16)
+
+Reconciled the live organogram against the June 2026 payroll workbook `Evoke Jun26.xlsx`.
+
+## Result
+- **Final headcount: 1545** (file had 1545 real employees + 1 Total row).
+- Matched & updated: salary on 167, joining date on 224 (from the file).
+- New hires added: **14**.
+- Departed / not-in-file removed: **96** (+1 junk 'NA' record).
+- Duplicate emp# stubs collapsed: 9.
+
+## Your structural changes — PRESERVED (not reverted)
+These department consolidations you made were kept, and new hires the file still
+listed under the old names were routed into them too:
+- Construction → Building and Project Development (72 people)
+- IMARAT Design Studio → Building and Project Development (17 people)
+- RE Sales → Sales (46 people)
+- Resale → Sales (25 people)
+- Sales Reporting → Sales (15 people)
+- Client Experience → Sales (9 people)
+- Sales Support & Operations → Sales (7 people)
+- Leasing → Malls (3 people)
+
+## New hires added (14)
+- Abdul Hanan Khaleeq — PropMax / CCTV (Rs 0)
+- Ammara Hanif — Facilities Management / Facilities Operations (Rs 0)
+- Deeba Naz — Sales / RE Sales (Rs 0)
+- Imama Qaiser — Building and Project Development / IMARAT Design Studio (Rs 0)
+- Kinza Mumtaz — Sales / RE Sales (Rs 0)
+- Maira Shujaat — People and Culture / Talent Acquisition (Rs 0)
+- Maryam Rahman — Facilities Management / Facilities Operations (Rs 0)
+- Minal Shahzad — Sales / Global Contact Center (Rs 0)
+- Muhammad Farhan Akhtar — Sales / RE Sales (Rs 0)
+- Muhammad Ibrahim Saeed — Vision Office / Performance Hub (Rs 0)
+- Muhammad Saad Arslan Sadiq — Vision Office / Performance Marketing (Rs 500,000)
+- Muhammad Umer — PropMax / CCTV (Rs 0)
+- Rafia saqib — Finance / Finance Management (Rs 0)
+- Shoaib Akhtar — PropMax / CCTV (Rs 0)
+
+## Removed — on old roster, absent from the June file (97)
+- Abida Mosavi (800802) — was Sales
+- Aftab Ahmed Hattar (800671) — was Sales
+- Aimen Sultan (30223) — was Sales
+- Aira Shah (801136) — was Sales
+- Aman Khan (800220) — was Sales
+- Amir Khan (800747) — was Sales
+- Amir Masih (801250) — was Horticulture
+- Amjid Hussain (70464) — was Chairman House
+- Ammad Yaqub (800594) — was Building and Project Development
+- Anum Khalid (801247) — was Sales
+- Areeb Sultan (801053) — was Sales
+- Arooba Azam (800549) — was Sales
+- Asadullah Khan (800555) — was Security Department
+- Ayesha Sultana (801183) — was Sales
+- Binte Fatima (22239) — was Sales
+- Burhan Haider (800699) — was Sales
+- Bushra Jawed (800202) — was Sales
+- Esha Tariq (1750) — was Sales
+- Fahad Hussain (800317) — was Sales
+- Faiza Malik (1364) — was Facilities Management
+- Fanoos Haider (800127) — was PropMax
+- Fida Hussain (70486) — was Security Department
+- Gulnaz Sharif (800495) — was Sales
+- Hamad Ullah (800119) — was Facilities Management
+- Haziq Islam (800680) — was Sales
+- Imran Ali (71302) — was Security Department
+- Iqra Raheem (800710) — was Sales
+- Iram Naz (800774) — was Sales
+- Ishtiaq Ahmed (70104) — was Procurement
+- Kalsoom Zahid (800508) — was Sales
+- Maham Sharif (71276) — was Facilities Management
+- Mahjabeen Shah (800992) — was Sales
+- Malaika Javed (801164) — was Sales
+- Maria Sultana Malik (21923) — was Marketing
+- Mehr Un Nisa (801284) — was Sales
+- Mehwish Amin Qureshi (22042) — was Sales
+- Mehwish Rafeeque (800702) — was Sales
+- Mishal Imran (800477) — was Sales
+- Moeez Mehmood (21823) — was Sales
+- Muhammad Ahad Ali Farooqui (801067) — was Sales
+- Muhammad Ammad (1380) — was Sales
+- Muhammad Ashfaq Mughal (800797) — was Sales
+- Muhammad Asim Iqbal (801031) — was Sales
+- Muhammad Bilal (800480) — was Sales
+- Muhammad Hamza Javed (1739) — was Sales
+- Muhammad Hassan (21971) — was Sales
+- Muhammad Nadeem Nasir (800940) — was Sales
+- Muhammad Raza Mehdi (800166) — was Sales
+- Muhammad Saad Masood Kaiyani (800800) — was Sales
+- Muhammad Saad Saleem (800967) — was Sales
+- Muhammad Saqlain Imtiaz (800785) — was Sales
+- Muhammad Sohrab (30065) — was Operations
+- Muhammad Subhan (71339) — was Malls
+- Muhammad Waseem Qaiser (800221) — was Sales
+- Muhammad Yar (1752) — was Sales
+- Musawer Ali (800977) — was Sales
+- NA (NA) — was Building and Project Development
+- Nabeel Ahmed (801411) — was Horticulture
+- Navid Ahmed (30166) — was PropMax
+- Obaid Ur Rehman (30189) — was Sales
+- Qarib Aslam (800570) — was Sales
+- Qubsha Anees (801319) — was Sales
+- Rana Abdul Basit Hassan (800889) — was Sales
+- Rimsha Shakil (800935) — was Sales
+- Saba Khan (22028) — was Sales
+- Safdar Ali (70393) — was Security Department
+- Salman Ahmed (800811) — was Sales
+- Salman Arshad (800374) — was Sales
+- Salman Khan (22199) — was Sales
+- Sana Arif (801432) — was Sales
+- Sana Hafeez (801202) — was Sales
+- Sara Noor (800934) — was People and Culture
+- Sawera Malik (800161) — was Sales
+- Sehrish Batool (801276) — was Sales
+- Shahzad Ahmad (70318) — was Building and Project Development
+- Sharoz Nadeem (800576) — was Sales
+- Sumaira Muneer (800843) — was Sales
+- Sumran Aslam (800505) — was Sales
+- Tabinda Iftikar (800953) — was Sales
+- Umair Abdullah (800226) — was Sales
+- Umair Ali (801239) — was Sales
+- Umair Shafique (71416) — was Building and Project Development
+- Usama Farooqui (71213) — was Security Department
+- Usman Khalid (71194) — was Sales
+- Usman Khan (22143) — was Sales
+- Uzair Sarwar (800026) — was Sales
+- Wajiha Khan (801225) — was Sales
+- Wajiha Zahra Khalid (800760) — was Sales
+- Waqas Ahmed Khan (800573) — was Sales
+- Waseem Haider (800770) — was Sales
+- Zafar Iqbal (70583) — was Horticulture
+- Zain Ali (801433) — was Security Department
+- Zakia Kafeel (21695) — was Sales
+- Zara Amjad (800087) — was Sales
+- Ziafat Hussain Shah (70584) — was Horticulture
+- Zohaib Rizwan (801192) — was Sales
+- Zoya Ghayas (22102) — was Sales
