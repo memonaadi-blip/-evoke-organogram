@@ -9,6 +9,7 @@
   const RAW = (window.EVOKE_DATA || []).slice();
   const LS_KEY = "evoke_org_draft_v2";   // v2: drop stale pre-June-payroll drafts
   const LS_LOG = "evoke_org_log_v2";
+  const LS_CFG = "evoke_org_cfg_v2";     // empty groups + any live hierarchy tweaks
   const $ = (s) => document.querySelector(s);
   const $$ = (s) => Array.prototype.slice.call(document.querySelectorAll(s));
 
@@ -123,7 +124,16 @@
         const l = localStorage.getItem(LS_LOG);
         if (l){ const arr = JSON.parse(l); if(Array.isArray(arr)) changeLog = arr; }
       }catch(e){}
+      try{
+        const c = localStorage.getItem(LS_CFG);
+        if (c){ const o = JSON.parse(c);
+          if(o && Array.isArray(o.emptyGroups)) CFG.emptyGroups = o.emptyGroups;
+          if(o && Array.isArray(o.hierarchy) && o.hierarchy.length) hierarchy = o.hierarchy.slice();
+          if(o && Array.isArray(o.fields)) o.fields.forEach(f=>{ if(f&&f.key&&!FIELDS.some(x=>x.key===f.key)) FIELDS.push(f); });
+        }
+      }catch(e){}
     }
+    pruneEmpty();
     // brand
     $("#brand-name").textContent = CFG.orgName || "Organogram";
     $("#brand-sub").textContent = CFG.subtitle || "";
@@ -137,6 +147,7 @@
     if(!EDIT) return;
     try{ localStorage.setItem(LS_KEY, JSON.stringify(strip(EMP))); }catch(e){}
     try{ localStorage.setItem(LS_LOG, JSON.stringify(changeLog)); }catch(e){}
+    try{ localStorage.setItem(LS_CFG, JSON.stringify({emptyGroups:emptyGroups(), hierarchy:hierarchy.slice(), fields:FIELDS})); }catch(e){}
     refreshBanner();
     // let the cloud layer auto-publish this edit so other browsers get it live
     if(window.ORG && typeof window.ORG.onEdit==="function"){ try{ window.ORG.onEdit(); }catch(e){} }
@@ -209,6 +220,59 @@
     for(const e of list){ const k=val(e,field); m.set(k,(m.get(k)||0)+1); }
     return [...m.entries()].sort((a,b)=>b[1]-a[1]);
   }
+
+  /* ---- empty groups: departments/sections created with no people yet.
+     Stored in CFG.emptyGroups as full paths [{field,value},…]. They render as
+     0-people boxes so a unit can exist before anyone is assigned to it, and
+     self-prune the moment a real person lands on that exact path. ---- */
+  function emptyGroups(){ return (CFG.emptyGroups = CFG.emptyGroups || []); }
+  function pruneEmpty(){
+    CFG.emptyGroups = emptyGroups().filter(g =>
+      Array.isArray(g) && g.length &&
+      !EMP.some(e => g.every(p => val(e, p.field) === p.value)));
+  }
+  function sameScope(a, b){
+    return a.length === b.length &&
+      a.every((p, i) => b[i] && p.field === b[i].field && String(p.value) === String(b[i].value));
+  }
+  /* names of empty groups that sit directly under `parentScope` at level `f` */
+  function emptyNamesAt(parentScope, f){
+    return emptyGroups().filter(g =>
+      Array.isArray(g) && g.length === parentScope.length + 1 &&
+      g[g.length - 1].field === f &&
+      parentScope.every((p, i) => g[i] && g[i].field === p.field && String(g[i].value) === String(p.value))
+    ).map(g => g[g.length - 1].value);
+  }
+  /* top-level units incl. empty ones — used by the sidebar, stats and apex */
+  function unitsAtTop(){
+    const topField = hierarchy[0]; if(!topField) return [];
+    const g = groupsAt(topField, EMP);
+    const extra = emptyNamesAt([], topField).filter(n => !g.some(([x]) => x === n));
+    return g.concat(extra.map(n => [n, 0]));
+  }
+  /* deepest hierarchy level actually used by a set of people, from level iG down */
+  function deepestLevel(people, iG){
+    let maxL = iG;
+    people.forEach(e => hierarchy.forEach((f, idx) => {
+      if(idx >= iG){ const v = e[f]; if(v != null && v !== "" && v !== "—") maxL = Math.max(maxL, idx); }
+    }));
+    return maxL;
+  }
+  /* make sure the drill hierarchy is at least `n` levels deep, appending
+     synthetic sub-levels as needed. Levels that stay unused ("—") are auto-
+     skipped by planLevel, so other departments are visually unaffected. */
+  function ensureDepth(n){
+    const labels = ["Sub-section", "Sub-unit", "Sub-group", "Tier 4", "Tier 5"];
+    let changed = false;
+    while(hierarchy.length < n){
+      const i = hierarchy.length, key = "lvl" + i;
+      hierarchy.push(key);
+      if(!FIELDS.some(f => f.key === key))
+        FIELDS.push({ key, label: labels[i - 2] || ("Level " + (i + 1)), group: true });
+      changed = true;
+    }
+    return changed;
+  }
   function leadOf(list){ return list.find(e=>e.is_lead) || list.slice().sort(bySeniority)[0]; }
   /* people sorted senior-first, but the (manual or inferred) Lead pinned to top */
   function peopleSorted(list){
@@ -223,7 +287,7 @@
   function stats(){
     $("#s-emp").textContent = EMP.length.toLocaleString();
     const topField = hierarchy[0];
-    const units = topField ? groupsAt(topField, EMP).length : 0;
+    const units = topField ? unitsAtTop().length : 0;
     $("#s-units").textContent = units;
     $("#s-units-lbl").textContent = topField ? fieldLabel(topField)+"s" : "Levels";
     $("#side-lbl").textContent = topField ? fieldLabel(topField) : "Units";
@@ -236,7 +300,7 @@
     const body=$("#body"), side=$("#sidebar");
     if(!topField){ body.classList.add("no-side"); return; }
     body.classList.remove("no-side");
-    const units = groupsAt(topField, EMP);
+    const units = unitsAtTop();
     $("#side-total").textContent = units.length;
     // gross salary total per top-level unit (for the sidebar list)
     const grossBy=new Map();
@@ -266,7 +330,7 @@
   /* ---- node markup ---- */
   function apexNode(){
     const topField=hierarchy[0];
-    const units = topField? groupsAt(topField,EMP).length : 0;
+    const units = topField? unitsAtTop().length : 0;
     const s=sumPay(EMP);
     return `<div class="node apex">
       <div class="role-eyebrow">${esc(CFG.orgName||"Organisation")}</div>
@@ -493,14 +557,17 @@
     ah.onclick=()=>{ const pre={}; path.forEach(p=>pre[p.field]=p.value); openEditor(null, pre); };
   }
   /* group-level header with a contextual "Add <level>" (department/section…) */
-  function groupAddHdr(field){
+  function groupAddHdr(field, scope){
     const lbl = fieldLabel(field);
     const add = EDIT ? `<button class="addhere edit-only" id="add-group" title="Add a new ${esc(lbl.toLowerCase())}">＋ Add ${esc(lbl.toLowerCase())}</button>` : "";
-    return `<div class="grouphdr"><span>${esc(lbl)}s</span><span class="gh-line"></span>${add}</div>`;
+    // inside a unit you can also drop a person straight in (no sub-group needed)
+    const addP = (EDIT && (scope||[]).length) ? `<button class="addhere edit-only" id="add-here-grp" title="Add a person directly to this ${esc((scope[scope.length-1].field===field?fieldLabel(field):fieldLabel(scope[scope.length-1].field)).toLowerCase())}">＋ Add person</button>` : "";
+    return `<div class="grouphdr"><span>${esc(lbl)}s</span><span class="gh-line"></span>${addP}${add}</div>`;
   }
 
   /* ---- main render ---- */
   function render(){
+    if(EDIT) pruneEmpty();               // clear any empty group that now has people
     stats();
     _moveOptsCache=null;                 // rebuild move-picker once per render
     if(viewMode==="tree"){ renderTree(); return; }
@@ -521,14 +588,18 @@
     if(plan.field){ // group level
       const f = plan.field;
       const isLeafParent = (plan.depth === hierarchy.length-1);
+      const parentScope = path.concat(plan.skipped);
       const groups = groupsAt(f, list);
-      const boxes = groups.map(([name,ct])=>{
+      const extra = emptyNamesAt(parentScope, f).filter(n=>!groups.some(([g])=>g===n));
+      const allGroups = groups.concat(extra.map(n=>[n,0]));
+      const boxes = allGroups.map(([name,ct])=>{
         const sub = list.filter(e=>val(e,f)===name);
         return groupBox(f,name,ct,leadOf(sub),isLeafParent,sumPay(sub),true);
       });
-      tree.innerHTML = lineageSpine()+`<div class="down"></div>`+groupAddHdr(f)+childrenRow(boxes);
+      tree.innerHTML = lineageSpine()+`<div class="down"></div>`+groupAddHdr(f, parentScope)+childrenRow(boxes);
       wireSpine(); wireBoxes(f, plan.skipped); adjustBar();
-      const ag=$("#add-group"); if(ag) ag.onclick=()=>openAddGroup(path.concat(plan.skipped), f);
+      const ag=$("#add-group"); if(ag) ag.onclick=()=>openAddGroup(parentScope, f);
+      const ap=$("#add-here-grp"); if(ap) ap.onclick=()=>{ const pre={}; parentScope.forEach(p=>pre[p.field]=p.value); openEditor(null, pre); };
     } else { // leaf: employees
       const {arr,lead}=peopleSorted(list);
       tree.innerHTML = lineageSpine()+`<div class="down"></div>`+
@@ -674,44 +745,83 @@
     $("#gm-overlay").dataset.skipped=JSON.stringify(skipped||[]);
     $("#gm-overlay").classList.add("show");
   }
-  function doGroupMove(mode){
+  async function doGroupMove(mode){
     const ov=$("#gm-overlay"), field=ov.dataset.field, name=ov.dataset.name;
     const skipped=JSON.parse(ov.dataset.skipped||"[]");
-    const target=$("#gm-target").value; const topField=hierarchy[0];
+    const target=$("#gm-target").value;
     if(!target){ ov.classList.remove("show"); return; }
     const {people}=groupPeople(field,name,skipped);
     if(!people.length){ ov.classList.remove("show"); return; }
+    ov.classList.remove("show");
+    const iG=hierarchy.indexOf(field);
+    // does this group hold named sub-groups (sections / sub-sections) under it?
+    const childField=hierarchy[iG+1];
+    const childVals=childField ? [...new Set(people.map(e=>val(e,childField)).filter(v=>v&&v!=="—"))] : [];
+    let nest=false;
+    if(childVals.length){
+      const cl=fieldLabel(childField).toLowerCase();
+      const verb=mode==="copy"?"Copy":"Move";
+      const c=await choose(`${verb} ${fieldLabel(field)}: ${name}`,
+        `<b>${esc(name)}</b> holds <b>${childVals.length}</b> ${esc(cl)}${childVals.length===1?"":"s"}. `+
+        `Keep it as one whole ${esc(fieldLabel(field).toLowerCase())} nested under <b>${esc(target)}</b> `+
+        `(${esc(target)} › ${esc(name)} › …), or move just its ${esc(cl)}s up into <b>${esc(target)}</b> and drop “${esc(name)}”?`,
+        [{label:`Keep ${name} whole`, kind:"primary", value:"whole"},
+         {label:`Just the ${cl}s`, value:"children"}]);
+      if(c==null) return;                 // cancelled
+      nest = (c==="whole");
+    }
+    applyGroupMove(people, iG, target, mode, nest, {field, name});
+  }
+  /* perform the actual relocation/duplication chosen in doGroupMove */
+  function applyGroupMove(people, iG, target, mode, nest, meta){
+    const topField=hierarchy[0];
     const single=people.length===1;
-    const who = single ? val(people[0],"name") : `${name} (${people.length} people)`;
-    const noun = single ? "person" : "people";
+    const who=single ? val(people[0],"name") : `${meta.name} (${people.length} people)`;
+    const maxL = nest ? deepestLevel(people, iG) : iG;
+    if(nest) ensureDepth(maxL+2);
+    const shift=(dst,src)=>{                 // nest: insert `target` at iG, push src's own path down one
+      const vals=[]; for(let L=iG;L<=maxL;L++) vals.push(src[hierarchy[L]]);
+      dst[hierarchy[iG]]=target;
+      for(let k=0;k<vals.length;k++) dst[hierarchy[iG+1+k]]=vals[k];
+    };
     if(mode==="copy"){
       let nextId=EMP.reduce((m,e)=>Math.max(m,e._id),-1);
-      people.forEach(src=>{ const {_id,...r}=src; r[topField]=target; EMP.push({...r,_id:++nextId}); });
-      logChange("Copy", {emp_no:single?val(people[0],"emp_no"):"—",name:who}, [{field:fieldLabel(field),from:name,to:target+" › "+name}]);
-      toast(`Copied ${who} → ${target}`);
+      people.forEach(src=>{ const {_id,...r}=src;
+        if(nest) shift(r, src); else r[topField]=target;
+        EMP.push({...r,_id:++nextId}); });
+      logChange("Copy", {emp_no:single?val(people[0],"emp_no"):"—",name:who},
+        [{field:fieldLabel(nest?meta.field:topField),from:meta.name,to:nest?target+" › "+meta.name:target}]);
+      toast(`Copied ${who} → ${target}${nest?" (kept whole)":""}`);
     } else {
-      people.forEach(e=>{ e[topField]=target; });
-      logChange("Move", {emp_no:single?val(people[0],"emp_no"):"—",name:who}, [{field:fieldLabel(topField),from:name,to:target}]);
-      toast(`Moved ${who} → ${target}`);
+      people.forEach(e=>{ if(nest) shift(e, e); else e[topField]=target; });
+      logChange("Move", {emp_no:single?val(people[0],"emp_no"):"—",name:who},
+        [{field:fieldLabel(nest?meta.field:topField),from:meta.name,to:nest?target+" › "+meta.name:target}]);
+      toast(`Moved ${who} → ${target}${nest?" (kept whole)":""}`);
     }
-    editCount++; ov.classList.remove("show"); saveDraft();
+    editCount++; saveDraft();
     // follow a moved single person to their new home; otherwise focus the target
     if(mode!=="copy" && single){ focusPerson(people[0]); }
     else { path=[{field:topField,value:target}]; render(); $(".stage").scrollTop=0; }
   }
   /* ---- delete a whole group (department / section) ---- */
   async function deleteGroup(field, name, skipped){
-    const {people}=groupPeople(field,name,skipped);
-    const c=await choose(`Delete ${fieldLabel(field)}: ${name}`,
-      `This removes the <b>${people.length}</b> people in <b>${esc(name)}</b> from the organisation. This cannot be undone except via Discard.`,
-      [{label:`Delete ${people.length} people`, kind:"danger", value:"del"}]);
+    const {people, gp}=groupPeople(field,name,skipped);
+    const empty=people.length===0;
+    const msg = empty
+      ? `Remove the empty ${esc(fieldLabel(field).toLowerCase())} <b>${esc(name)}</b>?`
+      : `This removes the <b>${people.length}</b> people in <b>${esc(name)}</b> from the organisation. This cannot be undone except via Discard.`;
+    const c=await choose(`Delete ${fieldLabel(field)}: ${name}`, msg,
+      [{label: empty?`Remove ${name}`:`Delete ${people.length} people`, kind:"danger", value:"del"}]);
     if(c!=="del") return;
-    const ids=new Set(people.map(p=>p._id));
-    EMP=EMP.filter(e=>!ids.has(e._id)); editCount++;
+    if(!empty){ const ids=new Set(people.map(p=>p._id)); EMP=EMP.filter(e=>!ids.has(e._id)); }
+    // drop the empty-group entry for this slot + any of its empty descendants
+    CFG.emptyGroups=emptyGroups().filter(g=>
+      !(g.length>=gp.length && gp.every((p,i)=>g[i]&&g[i].field===p.field&&String(g[i].value)===String(p.value))));
+    editCount++;
     logChange("Remove", {emp_no:"—",name:`${name} (${people.length})`}, [{field:fieldLabel(field)+" deleted",from:name,to:"—"}]);
     // step out if we were inside the deleted group
     path=path.filter((p,i)=>!(p.field===field&&p.value===name));
-    saveDraft(); render(); toast(`Deleted ${name} (${people.length} people)`);
+    saveDraft(); render(); toast(empty?`Removed ${name}`:`Deleted ${name} (${people.length} people)`);
   }
 
   /* ---- name prompt (rename / add group), returns Promise<string|null> ---- */
@@ -736,12 +846,21 @@
     const parent=path.concat(skipped||[]);
     const cnt=EMP.filter(e=>parent.every(p=>val(e,p.field)===p.value)&&val(e,field)===name).length;
     const where=parent.map(p=>p.value).join(" › ")||CFG.orgName||"the top";
-    const nn=await promptName(`Rename ${fieldLabel(field)}`,
-      `Under <b>${esc(where)}</b>. Renames this ${esc(fieldLabel(field).toLowerCase())} for all <b>${cnt}</b> ${cnt===1?"person":"people"}.`,
-      name, "Rename");
+    const lbl=fieldLabel(field).toLowerCase();
+    const note = cnt
+      ? `Under <b>${esc(where)}</b>. Renames this ${esc(lbl)} for all <b>${cnt}</b> ${cnt===1?"person":"people"}.`
+      : `Under <b>${esc(where)}</b>. This ${esc(lbl)} has no people yet.`;
+    const nn=await promptName(`Rename ${fieldLabel(field)}`, note, name, "Rename");
     if(!nn || nn===name) return;
     const people=EMP.filter(e=>parent.every(p=>val(e,p.field)===p.value)&&val(e,field)===name);
     people.forEach(e=>{ e[field]=nn; });
+    // keep any empty-group entries (self + descendants under this exact slot) in sync
+    const idx=parent.length;
+    emptyGroups().forEach(g=>{
+      if(g.length>idx && g[idx] && g[idx].field===field && String(g[idx].value)===String(name)
+        && parent.every((p,i)=>g[i]&&g[i].field===p.field&&String(g[i].value)===String(p.value)))
+        g[idx]={field, value:nn};
+    });
     editCount++; logChange("Rename", {emp_no:"—",name:`${nn} (${people.length})`}, [{field:fieldLabel(field),from:name,to:nn}]);
     path=path.map(p=>(p.field===field && p.value===name)?{field,value:nn}:p);   // keep breadcrumb valid
     saveDraft(); render(); toast(`Renamed ${name} → ${nn}`);
@@ -750,13 +869,23 @@
   /* ---- add a new department / sub-department (confirms the parent, then adds
      its first person so the group actually exists) ---- */
   async function openAddGroup(parentPath, field){
+    const lbl=fieldLabel(field).toLowerCase();
     const where=parentPath.map(p=>p.value).join(" › ")||CFG.orgName||"the top";
     const nn=await promptName(`New ${fieldLabel(field)}`,
-      `Adds a new ${esc(fieldLabel(field).toLowerCase())} under <b>${esc(where)}</b>. You'll add its first person next.`,
-      "", "Continue");
+      `Adds a new empty ${esc(lbl)} under <b>${esc(where)}</b>. You can assign people to it afterwards with ＋ Add person.`,
+      "", "Add");
     if(!nn) return;
-    const pre={}; parentPath.forEach(p=>pre[p.field]=p.value); pre[field]=nn;
-    openEditor(null, pre);
+    const scope=parentPath.map(p=>({field:p.field,value:p.value}));
+    const g=scope.concat([{field, value:nn}]);
+    const existsReal = EMP.some(e=> g.every(p=>val(e,p.field)===p.value));
+    const existsEmpty = emptyGroups().some(x=>sameScope(x,g));
+    if(existsReal || existsEmpty){ toast(`“${nn}” already exists here`); return; }
+    emptyGroups().push(g);
+    editCount++;
+    logChange("Add", {emp_no:"—",name:nn}, [{field:fieldLabel(field)+" added",from:"—",to:nn}]);
+    path=g.slice();                              // drill straight into the new unit
+    saveDraft(); render(); $(".stage").scrollTop=0;
+    toast(`Added ${lbl} “${nn}”`, "empty for now — use ＋ Add person to fill it");
   }
 
   /* ---- employee editor / add ---- */
@@ -1134,6 +1263,8 @@
     opts=opts||{};
     const wasDirty = dirty();
     if(cfg && Array.isArray(cfg.hierarchy)) hierarchy=cfg.hierarchy.slice();
+    if(cfg && Array.isArray(cfg.fields)) cfg.fields.forEach(f=>{ if(f&&f.key&&!FIELDS.some(x=>x.key===f.key)) FIELDS.push(f); });
+    if(cfg && Array.isArray(cfg.emptyGroups) && (opts.force || !wasDirty)) CFG.emptyGroups=cfg.emptyGroups.slice();
     if(Array.isArray(emps)){
       RAW.length=0; emps.forEach(r=>RAW.push(r));      // cloud is now the baseline
       committedSnapshot = JSON.stringify(emps);
