@@ -733,14 +733,34 @@
     const gp=path.concat(skipped||[], [{field,value:name}]);
     return { gp, people: EMP.filter(e=>gp.every(p=>val(e,p.field)===p.value)) };
   }
+  /* destination picker options: every department AND every section (incl. newly
+     added / empty ones), grouped, minus the group being moved and its subtree */
+  function groupMoveOptions(excludeGp){
+    const parent=excludeGp.slice(0,-1);
+    const bad=(tp)=>
+      (tp.length>=excludeGp.length && excludeGp.every((p,i)=>tp[i]&&tp[i].field===p.field&&String(tp[i].value)===String(p.value)))
+      || sameScope(tp,parent);            // self / descendant, or the current parent (no-op)
+    const top=hierarchy[0], secF=hierarchy[1];
+    const depts=unitsAtTop().map(([v])=>[{field:top,value:v}]);
+    const dOpts=depts.filter(tp=>!bad(tp))
+      .map(tp=>`<option value="${esc(pathKey(tp))}">${esc(tp[0].value)}</option>`).join("");
+    let sOpts="";
+    if(secF) depts.forEach(dtp=>{
+      const dv=dtp[0].value, ppl=EMP.filter(e=>val(e,top)===dv);
+      const named=groupsAt(secF,ppl).map(([v])=>v).filter(v=>v&&v!=="—");
+      const all=[...new Set(named.concat(emptyNamesAt([{field:top,value:dv}],secF)))];
+      all.forEach(sv=>{ const tp=[{field:top,value:dv},{field:secF,value:sv}];
+        if(!bad(tp)) sOpts+=`<option value="${esc(pathKey(tp))}">${esc(dv+" › "+sv)}</option>`; });
+    });
+    return `<optgroup label="${esc(fieldLabel(top))}s">${dOpts}</optgroup>`+
+      (sOpts?`<optgroup label="${esc(fieldLabel(secF)||"Section")}s">${sOpts}</optgroup>`:"");
+  }
   function openGroupMove(field, name, skipped){
-    const {people}=groupPeople(field,name,skipped);
-    const topField=hierarchy[0];
-    const targets=groupsAt(topField,EMP).map(([v])=>v).filter(v=>v!==name &&
-      !people.every(p=>val(p,topField)===v));   // exclude the current parent value
+    const {people, gp}=groupPeople(field,name,skipped);
     $("#gm-title").textContent=`Move ${fieldLabel(field)}: ${name}`;
-    $("#gm-msg").innerHTML=`<b>${people.length}</b> people. Choose the ${esc(fieldLabel(topField))} to move them under, then Move (relocate) or Copy (duplicate).`;
-    $("#gm-target").innerHTML=targets.map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join("");
+    $("#gm-msg").innerHTML=`<b>${people.length}</b> ${people.length===1?"person":"people"}. `+
+      `Pick where to put “${esc(name)}” — a ${esc(fieldLabel(hierarchy[0]).toLowerCase())} or a ${esc((fieldLabel(hierarchy[1])||"section").toLowerCase())} — then Move or Copy.`;
+    $("#gm-target").innerHTML=groupMoveOptions(gp);
     $("#gm-overlay").dataset.field=field; $("#gm-overlay").dataset.name=name;
     $("#gm-overlay").dataset.skipped=JSON.stringify(skipped||[]);
     $("#gm-overlay").classList.add("show");
@@ -748,60 +768,64 @@
   async function doGroupMove(mode){
     const ov=$("#gm-overlay"), field=ov.dataset.field, name=ov.dataset.name;
     const skipped=JSON.parse(ov.dataset.skipped||"[]");
-    const target=$("#gm-target").value;
-    if(!target){ ov.classList.remove("show"); return; }
+    const tkey=$("#gm-target").value;
+    if(!tkey){ ov.classList.remove("show"); return; }
+    const TP=parsePathKey(tkey);
     const {people}=groupPeople(field,name,skipped);
     if(!people.length){ ov.classList.remove("show"); return; }
     ov.classList.remove("show");
     const iG=hierarchy.indexOf(field);
+    const tLabel=TP.map(p=>p.value).join(" › ");
     // does this group hold named sub-groups (sections / sub-sections) under it?
     const childField=hierarchy[iG+1];
     const childVals=childField ? [...new Set(people.map(e=>val(e,childField)).filter(v=>v&&v!=="—"))] : [];
-    let nest=false;
+    let nest=true;                        // default: keep the group whole, nested under the target
     if(childVals.length){
       const cl=fieldLabel(childField).toLowerCase();
       const verb=mode==="copy"?"Copy":"Move";
       const c=await choose(`${verb} ${fieldLabel(field)}: ${name}`,
         `<b>${esc(name)}</b> holds <b>${childVals.length}</b> ${esc(cl)}${childVals.length===1?"":"s"}. `+
-        `Keep it as one whole ${esc(fieldLabel(field).toLowerCase())} nested under <b>${esc(target)}</b> `+
-        `(${esc(target)} › ${esc(name)} › …), or move just its ${esc(cl)}s up into <b>${esc(target)}</b> and drop “${esc(name)}”?`,
+        `Keep it whole as a sub-unit under <b>${esc(tLabel)}</b> (${esc(tLabel)} › ${esc(name)} › …), `+
+        `or move just its ${esc(cl)}s into <b>${esc(tLabel)}</b> and drop “${esc(name)}”?`,
         [{label:`Keep ${name} whole`, kind:"primary", value:"whole"},
          {label:`Just the ${cl}s`, value:"children"}]);
       if(c==null) return;                 // cancelled
       nest = (c==="whole");
     }
-    applyGroupMove(people, iG, target, mode, nest, {field, name});
+    applyGroupMove(people, iG, TP, mode, nest, {field, name});
   }
-  /* perform the actual relocation/duplication chosen in doGroupMove */
-  function applyGroupMove(people, iG, target, mode, nest, meta){
-    const topField=hierarchy[0];
+  /* perform the relocation/duplication. TP = target path (department, or
+     department+section, …); nest keeps the group as a named sub-unit under TP,
+     otherwise its children move straight into TP and the group name is dropped. */
+  function applyGroupMove(people, iG, TP, mode, nest, meta){
     const single=people.length===1;
     const who=single ? val(people[0],"name") : `${meta.name} (${people.length} people)`;
-    const maxL = nest ? deepestLevel(people, iG) : iG;
-    if(nest) ensureDepth(maxL+2);
-    const shift=(dst,src)=>{                 // nest: insert `target` at iG, push src's own path down one
-      const vals=[]; for(let L=iG;L<=maxL;L++) vals.push(src[hierarchy[L]]);
-      dst[hierarchy[iG]]=target;
-      for(let k=0;k<vals.length;k++) dst[hierarchy[iG+1+k]]=vals[k];
+    const tLabel=TP.map(p=>p.value).join(" › ");
+    const insert=TP.length;                              // level the moved subtree lands at
+    const maxL=deepestLevel(people, iG);
+    const from=nest ? iG : iG+1;                          // include the group's own level, or skip it
+    ensureDepth(insert + Math.max(0, maxL-from+1));
+    const relocate=(dst,src)=>{
+      const vals=[]; for(let L=from;L<=maxL;L++) vals.push(src[hierarchy[L]]);
+      for(let i=0;i<TP.length;i++) dst[hierarchy[i]]=TP[i].value;
+      for(let k=0;k<vals.length;k++) dst[hierarchy[insert+k]]=vals[k];
+      for(let L=insert+vals.length; L<hierarchy.length; L++) dst[hierarchy[L]]="";   // clear leftovers
     };
+    const to = nest ? tLabel+" › "+meta.name : tLabel;
     if(mode==="copy"){
       let nextId=EMP.reduce((m,e)=>Math.max(m,e._id),-1);
-      people.forEach(src=>{ const {_id,...r}=src;
-        if(nest) shift(r, src); else r[topField]=target;
-        EMP.push({...r,_id:++nextId}); });
-      logChange("Copy", {emp_no:single?val(people[0],"emp_no"):"—",name:who},
-        [{field:fieldLabel(nest?meta.field:topField),from:meta.name,to:nest?target+" › "+meta.name:target}]);
-      toast(`Copied ${who} → ${target}${nest?" (kept whole)":""}`);
+      people.forEach(src=>{ const {_id,...r}=src; relocate(r, src); EMP.push({...r,_id:++nextId}); });
+      logChange("Copy", {emp_no:single?val(people[0],"emp_no"):"—",name:who}, [{field:fieldLabel(meta.field),from:meta.name,to}]);
+      toast(`Copied ${who} → ${tLabel}${nest?" (kept whole)":""}`);
     } else {
-      people.forEach(e=>{ if(nest) shift(e, e); else e[topField]=target; });
-      logChange("Move", {emp_no:single?val(people[0],"emp_no"):"—",name:who},
-        [{field:fieldLabel(nest?meta.field:topField),from:meta.name,to:nest?target+" › "+meta.name:target}]);
-      toast(`Moved ${who} → ${target}${nest?" (kept whole)":""}`);
+      people.forEach(e=>relocate(e, e));
+      logChange("Move", {emp_no:single?val(people[0],"emp_no"):"—",name:who}, [{field:fieldLabel(meta.field),from:meta.name,to}]);
+      toast(`Moved ${who} → ${tLabel}${nest?" (kept whole)":""}`);
     }
     editCount++; saveDraft();
-    // follow a moved single person to their new home; otherwise focus the target
+    // follow a moved single person to their new home; otherwise focus the target node
     if(mode!=="copy" && single){ focusPerson(people[0]); }
-    else { path=[{field:topField,value:target}]; render(); $(".stage").scrollTop=0; }
+    else { path=TP.slice(); render(); $(".stage").scrollTop=0; }
   }
   /* ---- delete a whole group (department / section) ---- */
   async function deleteGroup(field, name, skipped){
